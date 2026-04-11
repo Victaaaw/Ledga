@@ -1,0 +1,334 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { User } from "@supabase/supabase-js";
+import { LogOut, Upload, FileText, Lightbulb, Clock, Hash, Search, GitBranch } from "lucide-react";
+import Link from "next/link";
+import { formatDate } from "@/lib/utils";
+
+interface Transcript {
+  id: string;
+  title: string | null;
+  processing_status: string;
+  created_at: string;
+  word_count: number | null;
+}
+
+interface Insight {
+  id: string;
+  insight_type: string;
+  content: string;
+  created_at: string;
+  topics: { name: string } | null;
+}
+
+interface DashboardContentProps {
+  user: User;
+  transcripts: Transcript[];
+  insights: Insight[];
+}
+
+export function DashboardContent({ user, transcripts, insights }: DashboardContentProps) {
+  const router = useRouter();
+  const [content, setContent] = useState("");
+  const [title, setTitle] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const WARN_WORDS = 50000;
+  const MAX_WORDS = 100000;
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const overLimit = wordCount > MAX_WORDS;
+  const showWarning = wordCount >= WARN_WORDS && wordCount <= MAX_WORDS;
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!content.trim()) {
+      setMessage({ type: "error", text: "Please paste your conversation content" });
+      return;
+    }
+
+    if (overLimit) {
+      setMessage({ type: "error", text: `Transcript too large (max ${MAX_WORDS.toLocaleString()} words)` });
+      return;
+    }
+
+    setUploading(true);
+    setMessage(null);
+
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("transcripts")
+      .insert({
+        user_id: user.id,
+        title: title.trim() || `Conversation ${formatDate(new Date())}`,
+        raw_content: content,
+        source_type: "manual",
+        processing_status: "pending",
+        word_count: wordCount,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      setMessage({ type: "error", text: error.message });
+      setUploading(false);
+      return;
+    }
+
+    setMessage({ type: "success", text: "Transcript uploaded! Extracting insights..." });
+    setContent("");
+    setTitle("");
+    router.refresh();
+
+    // Trigger extraction in the background
+    try {
+      const res = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcriptId: data.id }),
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setMessage({
+          type: "success",
+          text: `Extraction complete! Found ${result.topicsExtracted} topics and ${result.insightsExtracted} insights.`,
+        });
+      } else {
+        setMessage({ type: "error", text: "Transcript saved but extraction failed. You can retry later." });
+      }
+    } catch {
+      setMessage({ type: "error", text: "Transcript saved but extraction failed. You can retry later." });
+    }
+
+    router.refresh();
+    setUploading(false);
+  };
+
+  const getInsightIcon = (type: string) => {
+    switch (type) {
+      case "decision": return "🎯";
+      case "commitment": return "✅";
+      case "insight": return "💡";
+      case "pivot": return "🔄";
+      default: return "📝";
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Processed</span>;
+      case "processing":
+        return <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">Processing</span>;
+      case "failed":
+        return <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Failed</span>;
+      default:
+        return <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700">Pending</span>;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-xl font-bold text-slate-900">Ledga</h1>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="text-sm text-slate-600 hidden sm:inline">{user.email}</span>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sign out</span>
+              </Button>
+            </div>
+          </div>
+          <nav className="flex items-center gap-1 sm:gap-2 mt-2 -mx-2 overflow-x-auto">
+            <Link href="/dashboard/topics">
+              <Button variant="ghost" size="sm">
+                <Hash className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Topics</span>
+              </Button>
+            </Link>
+            <Link href="/dashboard/search">
+              <Button variant="ghost" size="sm">
+                <Search className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Search</span>
+              </Button>
+            </Link>
+            <Link href="/dashboard/mindmap">
+              <Button variant="ghost" size="sm">
+                <GitBranch className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Mind Map</span>
+              </Button>
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Upload Section */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Upload Conversation
+                </CardTitle>
+                <CardDescription>
+                  Paste your AI conversation transcript below
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleUpload} className="space-y-4">
+                  <div>
+                    <Input
+                      placeholder="Conversation title (optional)"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      disabled={uploading}
+                    />
+                  </div>
+                  <div>
+                    <Textarea
+                      placeholder="Paste your conversation here..."
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      disabled={uploading}
+                      className="min-h-[200px]"
+                    />
+                    {wordCount > 0 && !showWarning && !overLimit && (
+                      <p className="text-xs mt-1 text-muted-foreground">
+                        {wordCount.toLocaleString()} words
+                      </p>
+                    )}
+                    {showWarning && (
+                      <p className="text-xs mt-1 text-yellow-600">
+                        {wordCount.toLocaleString()} words — Large transcript, extraction may be slower
+                      </p>
+                    )}
+                    {overLimit && (
+                      <p className="text-xs mt-1 text-red-600 font-medium">
+                        {wordCount.toLocaleString()} words — Transcript too large (max {MAX_WORDS.toLocaleString()} words)
+                      </p>
+                    )}
+                  </div>
+
+                  {message && (
+                    <div
+                      className={`p-3 rounded-md text-sm ${
+                        message.type === "success"
+                          ? "bg-green-50 text-green-700 border border-green-200"
+                          : "bg-red-50 text-red-700 border border-red-200"
+                      }`}
+                    >
+                      {message.text}
+                    </div>
+                  )}
+
+                  <Button type="submit" disabled={uploading || overLimit}>
+                    {uploading ? "Uploading..." : "Upload & Process"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Recent Transcripts */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Recent Transcripts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {transcripts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No transcripts yet. Upload your first conversation above.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {transcripts.map((transcript) => (
+                      <div
+                        key={transcript.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-slate-50 rounded-lg"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{transcript.title || "Untitled"}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-2">
+                            <Clock className="h-3 w-3 shrink-0" />
+                            {formatDate(transcript.created_at)}
+                            {transcript.word_count && ` • ${transcript.word_count} words`}
+                          </p>
+                        </div>
+                        <div className="shrink-0">{getStatusBadge(transcript.processing_status)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Insights Sidebar */}
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5" />
+                  Recent Insights
+                </CardTitle>
+                <CardDescription>
+                  Extracted from your conversations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {insights.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No insights yet. Upload a conversation to get started.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {insights.map((insight) => (
+                      <div key={insight.id} className="border-l-2 border-primary pl-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span>{getInsightIcon(insight.insight_type)}</span>
+                          <span className="text-xs font-medium uppercase text-muted-foreground">
+                            {insight.insight_type}
+                          </span>
+                        </div>
+                        <p className="text-sm">{insight.content}</p>
+                        {insight.topics && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Topic: {insight.topics.name}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
