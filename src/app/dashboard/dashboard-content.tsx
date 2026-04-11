@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "@supabase/supabase-js";
-import { LogOut, Upload, FileText, Lightbulb, Clock, Hash, Search, GitBranch } from "lucide-react";
+import { LogOut, Upload, FileText, Lightbulb, Clock, Hash, Search, GitBranch, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 
@@ -40,6 +40,7 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
   const [title, setTitle] = useState("");
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const WARN_WORDS = 50000;
   const MAX_WORDS = 100000;
@@ -148,42 +149,74 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-xl font-bold text-slate-900">Ledga</h1>
-            <div className="flex items-center gap-2 sm:gap-4">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">Ledga</h1>
+            <div className="flex items-center gap-2">
               <span className="text-sm text-slate-600 hidden sm:inline">{user.email}</span>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sign out</span>
+              {/* Desktop nav */}
+              <nav className="hidden md:flex items-center gap-1">
+                <Link href="/dashboard/topics">
+                  <Button variant="ghost" size="sm">
+                    <Hash className="h-4 w-4 mr-2" />
+                    Topics
+                  </Button>
+                </Link>
+                <Link href="/dashboard/search">
+                  <Button variant="ghost" size="sm">
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </Button>
+                </Link>
+                <Link href="/dashboard/mindmap">
+                  <Button variant="ghost" size="sm">
+                    <GitBranch className="h-4 w-4 mr-2" />
+                    Mind Map
+                  </Button>
+                </Link>
+              </nav>
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="hidden sm:inline-flex">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign out
+              </Button>
+              {/* Mobile hamburger */}
+              <Button variant="ghost" size="sm" onClick={() => setMenuOpen(!menuOpen)} className="md:hidden">
+                {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
             </div>
           </div>
-          <nav className="flex items-center gap-1 sm:gap-2 mt-2 -mx-2 overflow-x-auto">
-            <Link href="/dashboard/topics">
-              <Button variant="ghost" size="sm">
-                <Hash className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Topics</span>
+          {/* Mobile nav dropdown */}
+          {menuOpen && (
+            <nav className="md:hidden flex flex-col gap-1 pt-3 pb-1 border-t border-slate-100 mt-3">
+              <Link href="/dashboard/topics" onClick={() => setMenuOpen(false)}>
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <Hash className="h-4 w-4 mr-2" />
+                  Topics
+                </Button>
+              </Link>
+              <Link href="/dashboard/search" onClick={() => setMenuOpen(false)}>
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+              </Link>
+              <Link href="/dashboard/mindmap" onClick={() => setMenuOpen(false)}>
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <GitBranch className="h-4 w-4 mr-2" />
+                  Mind Map
+                </Button>
+              </Link>
+              <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign out
               </Button>
-            </Link>
-            <Link href="/dashboard/search">
-              <Button variant="ghost" size="sm">
-                <Search className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Search</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/mindmap">
-              <Button variant="ghost" size="sm">
-                <GitBranch className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Mind Map</span>
-              </Button>
-            </Link>
-          </nav>
+            </nav>
+          )}
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Upload Section */}
@@ -245,7 +278,7 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
                     </div>
                   )}
 
-                  <Button type="submit" disabled={uploading || overLimit}>
+                  <Button type="submit" disabled={uploading || overLimit} className="w-full sm:w-auto">
                     {uploading ? "Uploading..." : "Upload & Process"}
                   </Button>
                 </form>

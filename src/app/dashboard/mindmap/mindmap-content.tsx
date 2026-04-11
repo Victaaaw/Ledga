@@ -514,7 +514,7 @@ export function MindMapContent({ topics, insights, transcripts }: MindMapContent
     <div className="h-screen flex flex-col bg-slate-50">
       <style dangerouslySetInnerHTML={{ __html: hoverStyles }} />
       <header className="bg-white border-b border-slate-200 shrink-0">
-        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex items-center gap-2 sm:gap-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-wrap items-center gap-2 sm:gap-4">
           <Link href="/dashboard" className="shrink-0">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 sm:mr-2" />
@@ -528,7 +528,7 @@ export function MindMapContent({ topics, insights, transcripts }: MindMapContent
               setFilterTranscriptId(e.target.value);
               setSelectedTopic(null);
             }}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-11 sm:h-9 w-full sm:w-auto rounded-md border border-input bg-background px-3 text-base sm:text-sm order-last sm:order-none"
           >
             <option value="all">All Transcripts</option>
             {transcripts.map((t) => (
@@ -570,7 +570,7 @@ export function MindMapContent({ topics, insights, transcripts }: MindMapContent
         </div>
 
         {selectedTopic && (
-          <div className="w-80 sm:w-96 bg-white border-l border-slate-200 overflow-y-auto shrink-0">
+          <div className="absolute inset-0 sm:static sm:inset-auto w-full sm:w-96 bg-white border-l border-slate-200 overflow-y-auto shrink-0 z-20">
             <div className="p-4 border-b border-slate-200 flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <h2 className="font-semibold text-slate-900 truncate">

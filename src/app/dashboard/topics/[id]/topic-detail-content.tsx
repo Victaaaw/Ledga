@@ -67,7 +67,7 @@ export function TopicDetailContent({
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <Card className="mb-6">
           <CardContent className="p-6">
             <p className="text-sm text-slate-700">{topic.description}</p>
