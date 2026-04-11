@@ -13,7 +13,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<AuthMode>("magic-link");
+  const [mode, setMode] = useState<AuthMode>("sign-in");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
         router.refresh();
       }
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -58,13 +58,24 @@ export default function LoginPage() {
         },
       });
 
-      if (error) {
-        setMessage({ type: "error", text: error.message });
+      if (signUpError) {
+        setMessage({ type: "error", text: signUpError.message });
       } else {
-        setMessage({
-          type: "success",
-          text: "Account created! Check your email to confirm your account.",
+        // Auto sign-in after signup
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
         });
+
+        if (signInError) {
+          setMessage({
+            type: "success",
+            text: "Account created! Check your email to confirm, then sign in.",
+          });
+        } else {
+          router.push("/dashboard");
+          router.refresh();
+        }
       }
     }
 
