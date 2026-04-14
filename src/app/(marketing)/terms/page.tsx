@@ -182,10 +182,10 @@ export default function TermsPage() {
             <p>Questions about these Terms?</p>
             <ul>
               <li>
-                <strong>Email:</strong> [TBD]
+                <strong>Email:</strong> hobbesinvestments@gmail.com
               </li>
               <li>
-                <strong>Address:</strong> [TBD]
+                <strong>Address:</strong> Ipswich, Queensland, Australia 4305
               </li>
             </ul>
           </Section>
