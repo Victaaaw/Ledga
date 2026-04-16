@@ -8,11 +8,26 @@ const SYSTEM_PROMPT =
 const EXTRACTION_PROMPT = `Extract topics and insights from the following conversation transcript.
 
 Return ONLY a JSON object in this exact format (no other text before or after):
-{"topics":[{"name":"short topic name","description":"one sentence summary","category":"one of the categories below"}],"insights":[{"insight_type":"decision|commitment|insight|pivot","content":"concise summary","context":"relevant quote from transcript","confidence_score":0.95,"topic_name":"must match a topic name above"}]}
+{"topics":[{"name":"short topic name","description":"one sentence summary","category":"one of the categories below"}],"insights":[{"insight_type":"decision|commitment|insight|pivot|task","content":"concise summary","context":"relevant quote from transcript","confidence_score":0.95,"topic_name":"must match a topic name above","context_tag":"personal|business|mixed"}]}
 
 Rules:
-- category MUST be one of: "Product & Features", "Technical", "Business & Monetization", "Legal & Compliance", "Go-To-Market", "Personal & Ideas", "Learning"
-- insight_type MUST be one of: "decision", "commitment", "insight", "pivot"
+- category MUST be one of: "business_monetisation", "go_to_market", "legal_compliance", "personal_ideas", "product_features", "technical"
+  - "business_monetisation" = revenue, pricing, sales, monetisation strategy
+  - "go_to_market" = launch, marketing, positioning, competitive landscape
+  - "legal_compliance" = legal, compliance, regulations, IP, privacy
+  - "personal_ideas" = personal reflections, brainstorms, life, family
+  - "product_features" = product development, features, UX, technical specs
+  - "technical" = architecture, code, infrastructure, databases
+- insight_type MUST be one of: "decision", "commitment", "insight", "pivot", "task"
+  - "decision" = a choice that has been made
+  - "commitment" = a promise or agreement to do something
+  - "insight" = a realisation, learning, or observation
+  - "pivot" = a change in direction or approach
+  - "task" = an actionable item that needs to be done, often time-bound (e.g. "follow up next week", "send the proposal", "book a meeting with X", "register the domain"). Tasks are concrete to-dos, not commitments to a person and not abstract decisions.
+- context_tag MUST be one of: "personal", "business", "mixed"
+  - "personal" = family, health, life admin, hobbies, self-reflection
+  - "business" = ventures, clients, products, revenue, partnerships
+  - "mixed" = clearly overlaps both personal and business (e.g. a family-run business decision, a hobby being monetised). Only use "mixed" when both sides are genuinely present — when in doubt, pick the dominant one.
 - topic_name MUST match the name of a topic in the topics array
 - confidence_score MUST be a number between 0.0 and 1.0
 - Output NOTHING except the JSON object — no markdown fences, no explanation`;
@@ -24,11 +39,12 @@ interface ExtractedTopic {
 }
 
 interface ExtractedInsight {
-  insight_type: "decision" | "commitment" | "insight" | "pivot";
+  insight_type: "decision" | "commitment" | "insight" | "pivot" | "task";
   content: string;
   context: string;
   confidence_score: number;
   topic_name: string;
+  context_tag: "personal" | "business" | "mixed";
 }
 
 interface ExtractionResult {
@@ -42,7 +58,7 @@ function callClaude(transcript: string): string {
   let rawOutput: string;
   try {
     rawOutput = execSync(
-      `claude -p --output-format json --system-prompt "${SYSTEM_PROMPT.replace(/"/g, '\\"')}"`,
+      `C:\\Users\\User\\.local\\bin\\claude.exe -p --output-format json --system-prompt "${SYSTEM_PROMPT.replace(/"/g, '\\"')}"`,
       {
         input: userMessage,
         encoding: "utf-8" as const,
@@ -182,41 +198,93 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert topics and build a name-to-id map
+    // Merge extracted topics with existing ones by name (case-insensitive).
+    // topicMap is keyed by NORMALIZED name so insights can resolve reliably even
+    // if the LLM uses inconsistent casing between topic and insight references.
+    const normalizeName = (n: string) => n.trim().toLowerCase();
     const topicMap = new Map<string, string>();
 
     if (extraction.topics && extraction.topics.length > 0) {
-      const topicRows = extraction.topics.map((topic) => ({
-        user_id: user.id,
-        transcript_id: transcriptId,
-        name: topic.name,
-        description: topic.description,
-        category: topic.category || null,
-      }));
+      // Dedupe extracted topics by normalized name (keep first occurrence's metadata)
+      const uniqueExtracted = new Map<string, ExtractedTopic>();
+      for (const t of extraction.topics) {
+        const key = normalizeName(t.name);
+        if (key && !uniqueExtracted.has(key)) uniqueExtracted.set(key, t);
+      }
 
-      const { data: insertedTopics, error: topicError } = await supabase
+      // Fetch this user's existing topics so we can match by name (case-insensitive).
+      // RLS already scopes by user, but we add the explicit filter for clarity.
+      const { data: existingTopics, error: existingError } = await supabase
         .from("topics")
-        .insert(topicRows)
-        .select("id, name");
+        .select("id, name")
+        .eq("user_id", user.id);
 
-      if (topicError) {
+      if (existingError) {
         await supabase
           .from("transcripts")
           .update({
             processing_status: "failed",
-            processing_error: `Failed to insert topics: ${topicError.message}`,
+            processing_error: `Failed to load existing topics: ${existingError.message}`,
           })
           .eq("id", transcriptId);
 
         return NextResponse.json(
-          { error: "Failed to save topics" },
+          { error: "Failed to load existing topics" },
           { status: 500 }
         );
       }
 
-      if (insertedTopics) {
-        for (const topic of insertedTopics) {
-          topicMap.set(topic.name, topic.id);
+      const existingByName = new Map<string, string>();
+      for (const t of existingTopics || []) {
+        existingByName.set(normalizeName(t.name), t.id);
+      }
+
+      // Partition: reuse existing ids, collect new topics to insert.
+      const topicsToInsert: ExtractedTopic[] = [];
+      for (const [key, topic] of uniqueExtracted) {
+        const existingId = existingByName.get(key);
+        if (existingId) {
+          topicMap.set(key, existingId);
+        } else {
+          topicsToInsert.push(topic);
+        }
+      }
+
+      // Insert only the new ones. transcript_id on new topics records the
+      // first transcript that created them; merged topics keep their original.
+      if (topicsToInsert.length > 0) {
+        const topicRows = topicsToInsert.map((topic) => ({
+          user_id: user.id,
+          transcript_id: transcriptId,
+          name: topic.name,
+          description: topic.description,
+          category: topic.category || null,
+        }));
+
+        const { data: insertedTopics, error: topicError } = await supabase
+          .from("topics")
+          .insert(topicRows)
+          .select("id, name");
+
+        if (topicError) {
+          await supabase
+            .from("transcripts")
+            .update({
+              processing_status: "failed",
+              processing_error: `Failed to insert topics: ${topicError.message}`,
+            })
+            .eq("id", transcriptId);
+
+          return NextResponse.json(
+            { error: "Failed to save topics" },
+            { status: 500 }
+          );
+        }
+
+        if (insertedTopics) {
+          for (const topic of insertedTopics) {
+            topicMap.set(normalizeName(topic.name), topic.id);
+          }
         }
       }
     }
@@ -228,11 +296,12 @@ export async function POST(request: Request) {
       const insightRows = extraction.insights.map((insight) => ({
         user_id: user.id,
         transcript_id: transcriptId,
-        topic_id: topicMap.get(insight.topic_name) || null,
+        topic_id: topicMap.get(normalizeName(insight.topic_name)) || null,
         insight_type: insight.insight_type,
         content: insight.content,
         context: insight.context,
         confidence_score: insight.confidence_score,
+        context_tag: insight.context_tag ?? null,
       }));
 
       const { error: insightError } = await supabase

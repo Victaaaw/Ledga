@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, GitBranch } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { HelpButton } from "@/components/help-button";
 
 interface Topic {
   id: string;
@@ -34,6 +35,7 @@ const insightIcons: Record<string, string> = {
   commitment: "\u2705",
   insight: "\u{1F4A1}",
   pivot: "\u{1F504}",
+  task: "\u2611\uFE0F",
 };
 
 export function TopicDetailContent({
@@ -41,28 +43,30 @@ export function TopicDetailContent({
   insights,
   transcriptTitle,
 }: TopicDetailContentProps) {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-start gap-3">
-          <Link href="/dashboard/topics" className="shrink-0 mt-0.5">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Topics</span>
-            </Button>
-          </Link>
-          <Link href="/dashboard/mindmap" className="shrink-0 mt-0.5">
-            <Button variant="ghost" size="sm">
-              <GitBranch className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Mind Map</span>
-            </Button>
-          </Link>
-          <div className="min-w-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="shrink-0 mt-0.5"
+          >
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Back</span>
+          </Button>
+          <div className="min-w-0 flex-1">
             <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{topic.name}</h1>
             <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
               <FileText className="h-3 w-3 shrink-0" />
               From: {transcriptTitle}
             </p>
+          </div>
+          <div className="shrink-0">
+            <HelpButton />
           </div>
         </div>
       </header>

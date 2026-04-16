@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,15 +8,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "@supabase/supabase-js";
-import { LogOut, Upload, FileText, Lightbulb, Clock, Hash, Search, GitBranch, Menu, X } from "lucide-react";
+import { LogOut, Upload, FileText, Lightbulb, Clock, Hash, Search, GitBranch, Menu, X, Trash2, ChevronDown, ChevronRight, Mic, Square, Settings } from "lucide-react";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
+import { HelpButton } from "@/components/help-button";
 
 interface Transcript {
   id: string;
   title: string | null;
   processing_status: string;
   created_at: string;
+  conversation_date: string | null;
   word_count: number | null;
 }
 
@@ -38,9 +40,11 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
   const router = useRouter();
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
+  const [conversationDate, setConversationDate] = useState("");
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
 
   const WARN_WORDS = 50000;
   const MAX_WORDS = 100000;
@@ -48,11 +52,154 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
   const overLimit = wordCount > MAX_WORDS;
   const showWarning = wordCount >= WARN_WORDS && wordCount <= MAX_WORDS;
 
+  // --- Voice recording (Web Speech API) ---
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+
+  // Refs that survive re-renders without triggering them. recognitionRef
+  // holds the live SpeechRecognition instance; baseContentRef snapshots
+  // whatever was already in the textarea when recording started so live
+  // transcription appends instead of overwriting; finalTranscriptRef
+  // accumulates finalised chunks across multiple onresult events.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const baseContentRef = useRef("");
+  const finalTranscriptRef = useRef("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
+      setSpeechSupported(true);
+    }
+  }, []);
+
+  // Cleanup on unmount: ensure no orphan recognition session or timer
+  // survives if the user navigates away mid-recording.
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+    };
+  }, []);
+
+  const composeContent = (base: string, addition: string) => {
+    if (!addition) return base;
+    if (!base) return addition;
+    const needsSpace = !base.endsWith(" ") && !base.endsWith("\n");
+    return base + (needsSpace ? " " : "") + addition;
+  };
+
+  const startRecording = () => {
+    if (!speechSupported || isRecording) return;
+    setRecordingError(null);
+
+    baseContentRef.current = content;
+    finalTranscriptRef.current = "";
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognition = (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-GB";
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      // Walk only the results that changed since the last event.
+      // Final results are appended to finalTranscriptRef once and never
+      // re-fire (resultIndex advances past them). Interim results are
+      // recomputed each event — they can refine across multiple fires
+      // before becoming final.
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0].transcript;
+        if (result.isFinal) {
+          finalTranscriptRef.current += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      setContent(
+        composeContent(baseContentRef.current, finalTranscriptRef.current + interim),
+      );
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onerror = (event: any) => {
+      setRecordingError(
+        event.error === "not-allowed"
+          ? "Microphone permission denied. Enable mic access in your browser."
+          : `Recording error: ${event.error}`,
+      );
+    };
+
+    recognition.onend = () => {
+      // Fires after stop(), abort(), error, or auto-stop on silence.
+      // Idempotent cleanup — safe to call regardless of how we got here.
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      // Drop any trailing interim by recomposing from base + finalised.
+      setContent(composeContent(baseContentRef.current, finalTranscriptRef.current));
+      setIsRecording(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingSeconds((s) => s + 1);
+      }, 1000);
+    } catch {
+      setRecordingError("Could not start recording");
+      recognitionRef.current = null;
+    }
+  };
+
+  const stopRecording = () => {
+    if (!recognitionRef.current) return;
+    try { recognitionRef.current.stop(); } catch {}
+    // onend will finalise content and reset isRecording.
+  };
+
+  const cancelRecording = () => {
+    // Wipe the accumulator first so onend's recompute restores baseContent.
+    finalTranscriptRef.current = "";
+    setContent(baseContentRef.current);
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+    }
+  };
+
+  const formatRecordingTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  };
+
+  // Navigating Dashboard → Mind Map should land on the default centered
+  // "My Knowledge" view, not the viewport restored from a prior session.
+  const resetMindmapViewport = () => {
+    try {
+      sessionStorage.removeItem("mindmap-viewport");
+    } catch {}
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -82,6 +229,9 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
         source_type: "manual",
         processing_status: "pending",
         word_count: wordCount,
+        conversation_date: conversationDate
+          ? new Date(conversationDate).toISOString()
+          : new Date().toISOString(),
       })
       .select()
       .single();
@@ -95,6 +245,7 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
     setMessage({ type: "success", text: "Transcript uploaded! Extracting insights..." });
     setContent("");
     setTitle("");
+    setConversationDate("");
     router.refresh();
 
     // Trigger extraction in the background
@@ -122,12 +273,37 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
     setUploading(false);
   };
 
+  const handleDelete = async (transcriptId: string) => {
+    if (!confirm("Delete this transcript and all its topics/insights?")) return;
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("transcripts")
+      .delete()
+      .eq("id", transcriptId)
+      .select();
+
+    if (error) {
+      setMessage({ type: "error", text: `Failed to delete: ${error.message}` });
+      return;
+    }
+    if (!data || data.length === 0) {
+      setMessage({
+        type: "error",
+        text: "Delete returned 0 rows — RLS policy is blocking DELETE.",
+      });
+      return;
+    }
+    router.refresh();
+  };
+
   const getInsightIcon = (type: string) => {
     switch (type) {
       case "decision": return "🎯";
       case "commitment": return "✅";
       case "insight": return "💡";
       case "pivot": return "🔄";
+      case "task": return "☑️";
       default: return "📝";
     }
   };
@@ -151,7 +327,7 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900">Ledga</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">NDLedger</h1>
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-600 hidden sm:inline">{user.email}</span>
               {/* Desktop nav */}
@@ -168,12 +344,19 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
                     Search
                   </Button>
                 </Link>
-                <Link href="/dashboard/mindmap">
+                <Link href="/dashboard/mindmap" onClick={resetMindmapViewport}>
                   <Button variant="ghost" size="sm">
                     <GitBranch className="h-4 w-4 mr-2" />
                     Mind Map
                   </Button>
                 </Link>
+                <Link href="/dashboard/settings">
+                  <Button variant="ghost" size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Button>
+                </Link>
+                <HelpButton />
               </nav>
               <Button variant="ghost" size="sm" onClick={handleSignOut} className="hidden sm:inline-flex">
                 <LogOut className="h-4 w-4 mr-2" />
@@ -200,12 +383,27 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
                   Search
                 </Button>
               </Link>
-              <Link href="/dashboard/mindmap" onClick={() => setMenuOpen(false)}>
+              <Link
+                href="/dashboard/mindmap"
+                onClick={() => {
+                  resetMindmapViewport();
+                  setMenuOpen(false);
+                }}
+              >
                 <Button variant="ghost" size="sm" className="w-full justify-start">
                   <GitBranch className="h-4 w-4 mr-2" />
                   Mind Map
                 </Button>
               </Link>
+              <Link href="/dashboard/settings" onClick={() => setMenuOpen(false)}>
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Button>
+              </Link>
+              <div className="w-full" onClick={() => setMenuOpen(false)}>
+                <HelpButton />
+              </div>
               <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign out
@@ -218,10 +416,8 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Upload Section */}
-          <div className="lg:col-span-2">
-            <Card>
+          <div className="lg:col-span-2 space-y-6">
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
@@ -246,7 +442,7 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
                       placeholder="Paste your conversation here..."
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
-                      disabled={uploading}
+                      disabled={uploading || isRecording}
                       className="min-h-[200px]"
                     />
                     {wordCount > 0 && !showWarning && !overLimit && (
@@ -264,6 +460,79 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
                         {wordCount.toLocaleString()} words — Transcript too large (max {MAX_WORDS.toLocaleString()} words)
                       </p>
                     )}
+                  </div>
+
+                  <div>
+                    {!isRecording ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={startRecording}
+                          disabled={uploading || !speechSupported}
+                          title={
+                            speechSupported
+                              ? "Record voice and live-transcribe into the textarea"
+                              : "Voice recording not supported in this browser (requires Chrome / Edge)"
+                          }
+                        >
+                          <Mic className="h-4 w-4 mr-2" />
+                          Record Voice
+                        </Button>
+                        {!speechSupported && (
+                          <p className="text-xs mt-1 text-muted-foreground">
+                            Voice recording requires a Chromium-based browser (Chrome, Edge).
+                          </p>
+                        )}
+                        {recordingError && (
+                          <p className="text-xs mt-1 text-red-600">{recordingError}</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md border border-red-200 bg-red-50">
+                        <span className="flex items-center gap-2 text-sm font-medium text-red-700">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
+                          Recording {formatRecordingTime(recordingSeconds)}
+                        </span>
+                        <div className="flex items-center gap-2 ml-auto">
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            onClick={stopRecording}
+                          >
+                            <Square className="h-4 w-4 mr-2" />
+                            Stop
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={cancelRecording}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="conversation-date"
+                      className="text-sm font-medium text-slate-700 block mb-1"
+                    >
+                      When did this conversation happen? (optional)
+                    </label>
+                    <Input
+                      id="conversation-date"
+                      type="datetime-local"
+                      value={conversationDate}
+                      onChange={(e) => setConversationDate(e.target.value)}
+                      disabled={uploading}
+                      className="sm:w-auto"
+                    />
                   </div>
 
                   {message && (
@@ -285,80 +554,122 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
               </CardContent>
             </Card>
 
-            {/* Recent Transcripts */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Recent Transcripts
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {transcripts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No transcripts yet. Upload your first conversation above.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {transcripts.map((transcript) => (
-                      <div
-                        key={transcript.id}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-slate-50 rounded-lg"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{transcript.title || "Untitled"}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-2">
-                            <Clock className="h-3 w-3 shrink-0" />
-                            {formatDate(transcript.created_at)}
-                            {transcript.word_count && ` • ${transcript.word_count} words`}
-                          </p>
-                        </div>
-                        <div className="shrink-0">{getStatusBadge(transcript.processing_status)}</div>
+          {/* Recent Transcripts */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Recent Transcripts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {transcripts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No transcripts yet. Upload your first conversation above.</p>
+              ) : (
+                <div className="space-y-3">
+                  {transcripts.map((transcript) => (
+                    <div
+                      key={transcript.id}
+                      className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-slate-50 rounded-lg"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{transcript.title || "Untitled"}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-2">
+                          <Clock className="h-3 w-3 shrink-0" />
+                          {formatDateTime(transcript.conversation_date ?? transcript.created_at)}
+                          {transcript.word_count && ` • ${transcript.word_count} words`}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {getStatusBadge(transcript.processing_status)}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(transcript.id)}
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          title="Delete transcript"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
           </div>
 
-          {/* Insights Sidebar */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5" />
-                  Recent Insights
-                </CardTitle>
-                <CardDescription>
-                  Extracted from your conversations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {insights.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No insights yet. Upload a conversation to get started.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {insights.map((insight) => (
-                      <div key={insight.id} className="border-l-2 border-primary pl-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span>{getInsightIcon(insight.insight_type)}</span>
-                          <span className="text-xs font-medium uppercase text-muted-foreground">
-                            {insight.insight_type}
-                          </span>
-                        </div>
-                        <p className="text-sm">{insight.content}</p>
-                        {insight.topics && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Topic: {insight.topics.name}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+          {/* Recent Insights — button that opens a card, right column */}
+          <div className="space-y-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowInsights((v) => !v)}
+              className="w-full justify-start"
+              aria-expanded={showInsights}
+            >
+              {showInsights ? (
+                <ChevronDown className="h-4 w-4 mr-2" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-2" />
+              )}
+              <Lightbulb className="h-4 w-4 mr-2" />
+              Recent Insights
+              <span className="ml-2 text-muted-foreground">
+                ({insights.length})
+              </span>
+            </Button>
+
+            {showInsights && (
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 gap-2">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lightbulb className="h-5 w-5" />
+                      Recent Insights
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Extracted from your conversations
+                    </CardDescription>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowInsights(false)}
+                    className="h-8 w-8 p-0 shrink-0"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {insights.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No insights yet. Upload a conversation to get started.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {insights.map((insight) => (
+                        <div key={insight.id} className="border-l-2 border-primary pl-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span>{getInsightIcon(insight.insight_type)}</span>
+                            <span className="text-xs font-medium uppercase text-muted-foreground">
+                              {insight.insight_type}
+                            </span>
+                          </div>
+                          <p className="text-sm">{insight.content}</p>
+                          {insight.topics && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Topic: {insight.topics.name}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>

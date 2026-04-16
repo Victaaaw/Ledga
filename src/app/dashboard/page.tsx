@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   const { data: transcripts } = await supabase
     .from("transcripts")
     .select("*")
-    .order("created_at", { ascending: false })
+    .order("conversation_date", { ascending: false, nullsFirst: false })
     .limit(10);
 
   // Fetch recent insights

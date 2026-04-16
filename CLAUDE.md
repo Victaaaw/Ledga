@@ -1,4 +1,4 @@
-# Project: Ledga (working title: NeuroLedga / LedgaTime)
+# Project: NDLedger (NDL)
 
 ## Team Dynamic
 - **Robert**: Founder, Product Owner, neurodivergent entrepreneur

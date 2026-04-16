@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Search } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { HelpButton } from "@/components/help-button";
 
-const INSIGHT_TYPES = ["all", "decision", "commitment", "insight", "pivot"] as const;
+const INSIGHT_TYPES = ["all", "decision", "commitment", "insight", "pivot", "task"] as const;
 type InsightFilter = (typeof INSIGHT_TYPES)[number];
 
 const insightIcons: Record<string, string> = {
@@ -18,6 +19,7 @@ const insightIcons: Record<string, string> = {
   commitment: "\u2705",
   insight: "\u{1F4A1}",
   pivot: "\u{1F504}",
+  task: "\u2611\uFE0F",
 };
 
 const filterLabels: Record<InsightFilter, string> = {
@@ -26,6 +28,7 @@ const filterLabels: Record<InsightFilter, string> = {
   commitment: "Commitments",
   insight: "Insights",
   pivot: "Pivots",
+  task: "Tasks",
 };
 
 interface InsightResult {
@@ -101,6 +104,9 @@ export default function SearchPage() {
             </Button>
           </Link>
           <h1 className="text-lg sm:text-xl font-bold text-slate-900">Search Insights</h1>
+          <div className="ml-auto">
+            <HelpButton />
+          </div>
         </div>
       </header>
 

@@ -1,16 +1,29 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Hash, Lightbulb, Clock } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import {
+  ArrowLeft,
+  Hash,
+  Lightbulb,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+} from "lucide-react";
+import { formatDate, formatDateTime } from "@/lib/utils";
+import { HelpButton } from "@/components/help-button";
 
 interface TopicItem {
   id: string;
   name: string;
   description: string;
   created_at: string;
+  transcript_id: string;
+  transcript_title: string | null;
+  transcript_date: string;
   insight_count: number;
   last_mentioned: string;
 }
@@ -19,7 +32,53 @@ interface TopicsContentProps {
   topics: TopicItem[];
 }
 
+interface TranscriptGroup {
+  transcript_id: string;
+  title: string;
+  date: string;
+  topics: TopicItem[];
+}
+
 export function TopicsContent({ topics }: TopicsContentProps) {
+  const groups = useMemo<TranscriptGroup[]>(() => {
+    const map = new Map<string, TranscriptGroup>();
+    for (const topic of topics) {
+      let group = map.get(topic.transcript_id);
+      if (!group) {
+        group = {
+          transcript_id: topic.transcript_id,
+          title: topic.transcript_title?.trim() || "Untitled conversation",
+          date: topic.transcript_date,
+          topics: [],
+        };
+        map.set(topic.transcript_id, group);
+      }
+      group.topics.push(topic);
+    }
+    const list = Array.from(map.values());
+    for (const group of list) {
+      group.topics.sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+      );
+    }
+    return list.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [topics]);
+
+  const [collapsed, setCollapsed] = useState<Set<string>>(
+    () => new Set(topics.map((t) => t.transcript_id))
+  );
+
+  const toggle = (transcriptId: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(transcriptId)) next.delete(transcriptId);
+      else next.add(transcriptId);
+      return next;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200">
@@ -31,6 +90,9 @@ export function TopicsContent({ topics }: TopicsContentProps) {
             </Button>
           </Link>
           <h1 className="text-lg sm:text-xl font-bold text-slate-900">Topics</h1>
+          <div className="ml-auto">
+            <HelpButton />
+          </div>
         </div>
       </header>
 
@@ -45,34 +107,67 @@ export function TopicsContent({ topics }: TopicsContentProps) {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {topics.map((topic) => (
-              <Link key={topic.id} href={`/dashboard/topics/${topic.id}`}>
-                <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Hash className="h-4 w-4 text-primary" />
-                      {topic.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {topic.description}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Lightbulb className="h-3 w-3" />
-                        {topic.insight_count} insight{topic.insight_count !== 1 ? "s" : ""}
+          <div className="space-y-6">
+            {groups.map((group) => {
+              const isCollapsed = collapsed.has(group.transcript_id);
+              return (
+                <section key={group.transcript_id}>
+                  <button
+                    onClick={() => toggle(group.transcript_id)}
+                    className="w-full flex items-center gap-2 py-2 px-1 text-left hover:bg-slate-100 rounded-md transition-colors"
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="h-4 w-4 text-slate-500 shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
+                    )}
+                    <FileText className="h-4 w-4 text-slate-500 shrink-0" />
+                    <h2 className="text-base font-semibold text-slate-900 truncate">
+                      {group.title}{" "}
+                      <span className="font-normal text-muted-foreground">
+                        – {formatDateTime(group.date)}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDate(topic.last_mentioned)}
-                      </span>
+                    </h2>
+                    <span className="text-sm text-muted-foreground shrink-0">
+                      ({group.topics.length})
+                    </span>
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {group.topics.map((topic) => (
+                        <Link key={topic.id} href={`/dashboard/topics/${topic.id}`}>
+                          <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <Hash className="h-4 w-4 text-primary" />
+                                {topic.name}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-sm text-muted-foreground mb-4">
+                                {topic.description}
+                              </p>
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Lightbulb className="h-3 w-3" />
+                                  {topic.insight_count} insight
+                                  {topic.insight_count !== 1 ? "s" : ""}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {formatDate(topic.last_mentioned)}
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                  )}
+                </section>
+              );
+            })}
           </div>
         )}
       </main>

@@ -9,6 +9,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 type AuthMode = "magic-link" | "sign-in" | "sign-up";
 
+// Dev-only diagnostic. Reads document.cookie and logs which Supabase cookies
+// (sb-* prefix) are visible to JS. Note: domain/path/sameSite cannot be read
+// from JS — inspect those in DevTools → Application → Cookies.
+function logSupabaseCookies(label: string) {
+  if (process.env.NODE_ENV !== "development") return;
+  const sbCookies = document.cookie
+    .split("; ")
+    .filter((c) => c.startsWith("sb-"))
+    .map((c) => c.split("=")[0]);
+  console.log(`[login] sb-* cookies ${label}:`, sbCookies);
+  console.log(
+    `[login] verifier present:`,
+    sbCookies.some((name) => name.includes("code-verifier")),
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -31,6 +47,8 @@ export default function LoginPage() {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
+
+      logSupabaseCookies("after signInWithOtp");
 
       if (error) {
         setMessage({ type: "error", text: error.message });
@@ -57,6 +75,8 @@ export default function LoginPage() {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
+
+      logSupabaseCookies("after signUp");
 
       if (signUpError) {
         setMessage({ type: "error", text: signUpError.message });
@@ -92,7 +112,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-6 sm:p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center px-4 sm:px-6">
-          <CardTitle className="text-xl sm:text-2xl font-bold">Welcome to Ledga</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl font-bold">Welcome to NDLedger</CardTitle>
           <CardDescription>
             Your AI conversation knowledge library
           </CardDescription>

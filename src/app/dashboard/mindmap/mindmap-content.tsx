@@ -1,22 +1,27 @@
 "use client";
 
-import { useMemo, useCallback, useState, memo } from "react";
+import { useMemo, useCallback, memo, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ReactFlow,
   Background,
   Controls,
+  ControlButton,
   Handle,
   Position,
+  useReactFlow,
   type Node,
   type Edge,
   type NodeMouseHandler,
   type NodeProps,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, X, ExternalLink } from "lucide-react";
+import { ArrowLeft, X, ExternalLink, Undo2, Plus, Minus, Maximize } from "lucide-react";
+import { HelpButton } from "@/components/help-button";
 
 interface TopicData {
   id: string;
@@ -52,6 +57,7 @@ const insightColors: Record<string, string> = {
   commitment: "#DCFCE7",
   insight: "#FEF9C3",
   pivot: "#FFEDD5",
+  task: "#EDE9FE",
 };
 
 const insightBorders: Record<string, string> = {
@@ -59,6 +65,7 @@ const insightBorders: Record<string, string> = {
   commitment: "#22C55E",
   insight: "#EAB308",
   pivot: "#F97316",
+  task: "#8B5CF6",
 };
 
 const insightIcons: Record<string, string> = {
@@ -66,18 +73,32 @@ const insightIcons: Record<string, string> = {
   commitment: "\u2705",
   insight: "\u{1F4A1}",
   pivot: "\u{1F504}",
+  task: "\u2611\uFE0F",
 };
 
 const categoryColors: Record<string, { bg: string; border: string }> = {
-  "Product & Features": { bg: "#EDE9FE", border: "#8B5CF6" },
-  Technical: { bg: "#DBEAFE", border: "#3B82F6" },
-  "Business & Monetization": { bg: "#DCFCE7", border: "#22C55E" },
-  "Legal & Compliance": { bg: "#FEF3C7", border: "#F59E0B" },
-  "Go-To-Market": { bg: "#FFE4E6", border: "#F43F5E" },
-  "Personal & Ideas": { bg: "#F0FDFA", border: "#14B8A6" },
-  Learning: { bg: "#F3E8FF", border: "#9333EA" },
+  business_monetisation: { bg: "#FEE2E2", border: "#EF4444" },
+  go_to_market: { bg: "#FEE2E2", border: "#EF4444" },
+  legal_compliance: { bg: "#FEE2E2", border: "#EF4444" },
+  personal_ideas: { bg: "#DCFCE7", border: "#22C55E" },
+  product_features: { bg: "#FEF9C3", border: "#EAB308" },
+  technical: { bg: "#DBEAFE", border: "#3B82F6" },
   Uncategorized: { bg: "#F1F5F9", border: "#94A3B8" },
 };
+
+const categoryLabels: Record<string, string> = {
+  business_monetisation: "Business & Monetisation",
+  go_to_market: "Go to Market",
+  legal_compliance: "Legal & Compliance",
+  personal_ideas: "Personal & Ideas",
+  product_features: "Product & Features",
+  technical: "Technical",
+  Uncategorized: "Uncategorized",
+};
+
+function formatCategory(name: string): string {
+  return categoryLabels[name] || name;
+}
 
 // --- Custom node components ---
 
@@ -85,10 +106,11 @@ const TopicNode = memo(({ data }: NodeProps) => {
   const isSelected = data.isSelected as boolean;
   const isExpanded = data.isExpanded as boolean;
   const insightCount = data.insightCount as number;
-  const onToggle = data.onToggle as () => void;
+  const label = data.label as string;
 
   const borderWeight = isSelected ? 4 : Math.min(2 + insightCount, 5);
   const borderColor = isSelected ? "#4F46E5" : "#6366F1";
+  const arrow = insightCount > 0 ? (isExpanded ? "▼ " : "▶ ") : "";
 
   return (
     <div
@@ -109,36 +131,8 @@ const TopicNode = memo(({ data }: NodeProps) => {
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
       <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {data.label as string}
+        {arrow}{label}
       </div>
-      {insightCount > 0 && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          style={{
-            position: "absolute",
-            top: -10,
-            right: -10,
-            width: 26,
-            height: 26,
-            borderRadius: "50%",
-            background: isExpanded ? "#6366F1" : "#94A3B8",
-            color: "#FFF",
-            fontSize: 15,
-            fontWeight: 700,
-            border: "2px solid #FFF",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            lineHeight: 1,
-          }}
-        >
-          {isExpanded ? "\u2212" : "+"}
-        </button>
-      )}
       {!isExpanded && insightCount > 0 && (
         <div style={{ fontSize: 11, color: "#6366F1", marginTop: 3 }}>
           {insightCount} insight{insightCount !== 1 ? "s" : ""}
@@ -151,6 +145,66 @@ TopicNode.displayName = "TopicNode";
 
 const nodeTypes = { topicNode: TopicNode };
 
+// Zoom buttons that support press-and-hold for continuous zoom. A single click
+// fires one zoom step (from mousedown); holding kicks off an interval that
+// repeats until mouseup/leave/touchend.
+function CustomZoomControls() {
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stop = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const start = useCallback(
+    (fn: () => void) => {
+      stop();
+      fn();
+      intervalRef.current = setInterval(fn, 100);
+    },
+    [stop],
+  );
+
+  useEffect(() => stop, [stop]);
+
+  const startZoomIn = useCallback(() => start(() => zoomIn({ duration: 150 })), [start, zoomIn]);
+  const startZoomOut = useCallback(() => start(() => zoomOut({ duration: 150 })), [start, zoomOut]);
+  const handleFit = useCallback(() => fitView({ padding: 0.3, duration: 300 }), [fitView]);
+
+  return (
+    <>
+      <ControlButton
+        className="zoom-btn-hold"
+        onMouseDown={startZoomIn}
+        onMouseUp={stop}
+        onMouseLeave={stop}
+        onTouchStart={startZoomIn}
+        onTouchEnd={stop}
+        aria-label="Zoom in — press and hold to zoom continuously"
+      >
+        <Plus size={12} strokeWidth={3} />
+      </ControlButton>
+      <ControlButton
+        className="zoom-btn-hold"
+        onMouseDown={startZoomOut}
+        onMouseUp={stop}
+        onMouseLeave={stop}
+        onTouchStart={startZoomOut}
+        onTouchEnd={stop}
+        aria-label="Zoom out — press and hold to zoom continuously"
+      >
+        <Minus size={12} strokeWidth={3} />
+      </ControlButton>
+      <ControlButton onClick={handleFit} title="Fit view" aria-label="Fit view">
+        <Maximize size={12} strokeWidth={3} />
+      </ControlButton>
+    </>
+  );
+}
+
 // --- Hover CSS ---
 const hoverStyles = `
   .react-flow__node {
@@ -161,6 +215,41 @@ const hoverStyles = `
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.18));
     z-index: 10 !important;
   }
+  .zoom-btn-hold { position: relative; }
+  .zoom-btn-hold::after {
+    content: "Press and hold to zoom";
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #0F172A;
+    color: #FFFFFF;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .zoom-btn-hold::before {
+    content: "";
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 4px solid transparent;
+    border-right-color: #0F172A;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 100;
+  }
+  .zoom-btn-hold:hover::after,
+  .zoom-btn-hold:hover::before { opacity: 1; }
 `;
 
 // --- Layout constants ---
@@ -190,13 +279,37 @@ function buildGraph(
   topics: TopicData[],
   insights: InsightData[],
   selectedTopicId: string | null,
-  expandedCategories: Set<string>,
-  expandedTopics: Set<string>,
-  toggleCategory: (name: string) => void,
-  toggleTopic: (id: string) => void,
+  rootExpanded: boolean,
+  expandedCategoryName: string | null,
+  expandedTopicId: string | null,
 ) {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
+
+  const rootStyle = {
+    background: "#0F172A",
+    color: "#FFFFFF",
+    fontWeight: 700,
+    fontSize: 18,
+    borderRadius: 12,
+    padding: "18px 28px",
+    border: "none",
+    width: ROOT_WIDTH,
+    textAlign: "center" as const,
+    cursor: "pointer",
+  };
+
+  // When the root is not yet expanded, only render the root node.
+  if (!rootExpanded) {
+    nodes.push({
+      id: "root",
+      position: { x: 0, y: 0 },
+      data: { label: "▶ My Knowledge", isRoot: true },
+      style: rootStyle,
+      draggable: true,
+    });
+    return { nodes, edges };
+  }
 
   // Group insights by topic_id
   const insightsByTopic: Record<string, InsightData[]> = {};
@@ -222,17 +335,18 @@ function buildGraph(
     catRows.push(categoryNames.slice(i, i + CATS_PER_ROW));
   }
 
-  // Calculate lane heights for each category
+  // Calculate lane heights for each category.
+  // Only the single expanded category (if any) has tall lane with topics.
   const laneHeights: Record<string, number> = {};
   for (const catName of categoryNames) {
-    if (!expandedCategories.has(catName)) {
+    if (catName !== expandedCategoryName) {
       // Collapsed: just the category node
       laneHeights[catName] = CATEGORY_NODE_HEIGHT + LANE_PAD_Y;
       continue;
     }
     let h = 0;
     for (const topic of topicsByCategory[catName]) {
-      const isExpanded = expandedTopics.has(topic.id);
+      const isExpanded = expandedTopicId === topic.id;
       const insCount = (insightsByTopic[topic.id] || []).length;
       const blockH = isExpanded
         ? Math.max(TOPIC_NODE_HEIGHT, insCount * (INSIGHT_NODE_HEIGHT + INSIGHT_GAP_Y))
@@ -253,18 +367,8 @@ function buildGraph(
   nodes.push({
     id: "root",
     position: { x: 0, y: totalHeight / 2 - 35 },
-    data: { label: "My Knowledge" },
-    style: {
-      background: "#0F172A",
-      color: "#FFFFFF",
-      fontWeight: 700,
-      fontSize: 18,
-      borderRadius: 12,
-      padding: "18px 28px",
-      border: "none",
-      width: ROOT_WIDTH,
-      textAlign: "center" as const,
-    },
+    data: { label: "▼ My Knowledge", isRoot: true },
+    style: rootStyle,
     draggable: true,
   });
 
@@ -288,15 +392,14 @@ function buildGraph(
       // Category node — centered in its lane
       const catCenterY = laneY + laneHeights[catName] / 2 - CATEGORY_NODE_HEIGHT / 2;
 
-      const isCatExpanded = expandedCategories.has(catName);
+      const isCatExpanded = expandedCategoryName === catName;
 
       nodes.push({
         id: catId,
         position: { x: CAT_COL_X + xOffset, y: catCenterY },
         data: {
-          label: `${isCatExpanded ? "−" : "+"} ${catName} (${catTopics.length})`,
+          label: `${isCatExpanded ? "▼" : "▶"} ${formatCategory(catName)} (${catTopics.length})`,
           catName,
-          onToggleCategory: () => toggleCategory(catName),
         },
         style: {
           background: colors.bg,
@@ -333,7 +436,7 @@ function buildGraph(
 
       for (const topic of catTopics) {
         const topicInsights = insightsByTopic[topic.id] || [];
-        const isExpanded = expandedTopics.has(topic.id);
+        const isExpanded = expandedTopicId === topic.id;
         const insBlockH = isExpanded
           ? topicInsights.length * (INSIGHT_NODE_HEIGHT + INSIGHT_GAP_Y)
           : 0;
@@ -354,7 +457,6 @@ function buildGraph(
             isSelected,
             isExpanded,
             insightCount: topicInsights.length,
-            onToggle: () => toggleTopic(topic.id),
           },
           draggable: true,
         });
@@ -384,7 +486,7 @@ function buildGraph(
                 x: INSIGHT_COL_X + xOffset,
                 y: topicY + insIdx * (INSIGHT_NODE_HEIGHT + INSIGHT_GAP_Y),
               },
-              data: { label },
+              data: { label, parentTopicId: topic.id },
               style: {
                 background: insightColors[ins.insight_type] || "#F1F5F9",
                 border: `2px solid ${insightBorders[ins.insight_type] || "#94A3B8"}`,
@@ -429,33 +531,73 @@ function buildGraph(
 // --- Component ---
 
 export function MindMapContent({ topics, insights, transcripts }: MindMapContentProps) {
-  const [selectedTopic, setSelectedTopic] = useState<TopicData | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
-  const [filterTranscriptId, setFilterTranscriptId] = useState<string>("all");
+  // All expansion/selection state lives in the URL. This makes the browser's
+  // back button (and router.back() from child pages like topic detail) restore
+  // the exact previous view — each click pushes a new history entry.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const toggleCategory = useCallback((name: string) => {
-    setExpandedCategories((prev) => {
-      if (prev.has(name)) {
-        // Collapse this category
-        return new Set();
+  const rootExpanded = searchParams.get("e") === "1";
+  const expandedCategoryName = searchParams.get("c");
+  const expandedTopicId = searchParams.get("t");
+  const selectedTopicId = searchParams.get("s");
+  const filterTranscriptId = searchParams.get("f") ?? "all";
+
+  const selectedTopic = useMemo(
+    () =>
+      selectedTopicId
+        ? topics.find((t) => t.id === selectedTopicId) ?? null
+        : null,
+    [selectedTopicId, topics]
+  );
+
+  // Push a new history entry with updated query params. Passing `null` for a
+  // key removes it. Every user action that changes the visible state goes
+  // through this so browser back works as the navigation stack.
+  const pushParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null) next.delete(key);
+        else next.set(key, value);
       }
-      // Expand this one, collapse others
-      return new Set([name]);
-    });
-  }, []);
+      const qs = next.toString();
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams]
+  );
 
-  const toggleTopic = useCallback((id: string) => {
-    setExpandedTopics((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+  const toggleRoot = useCallback(() => {
+    if (rootExpanded) {
+      // Collapsing root: also drop everything below.
+      pushParams({ e: null, c: null, t: null });
+    } else {
+      pushParams({ e: "1" });
+    }
+  }, [rootExpanded, pushParams]);
+
+  const toggleCategory = useCallback(
+    (name: string) => {
+      if (expandedCategoryName === name) {
+        pushParams({ c: null, t: null });
       } else {
-        next.add(id);
+        pushParams({ c: name, t: null });
       }
-      return next;
-    });
-  }, []);
+    },
+    [expandedCategoryName, pushParams]
+  );
+
+  const toggleTopic = useCallback(
+    (id: string) => {
+      if (expandedTopicId === id) {
+        pushParams({ t: null });
+      } else {
+        pushParams({ t: id });
+      }
+    },
+    [expandedTopicId, pushParams]
+  );
 
   const filteredTopics = useMemo(
     () =>
@@ -484,26 +626,56 @@ export function MindMapContent({ topics, insights, transcripts }: MindMapContent
   }, [filteredInsights]);
 
   const { nodes, edges } = useMemo(
-    () => buildGraph(filteredTopics, filteredInsights, selectedTopic?.id ?? null, expandedCategories, expandedTopics, toggleCategory, toggleTopic),
-    [filteredTopics, filteredInsights, selectedTopic, expandedCategories, expandedTopics, toggleCategory, toggleTopic]
+    () => buildGraph(filteredTopics, filteredInsights, selectedTopicId, rootExpanded, expandedCategoryName, expandedTopicId),
+    [filteredTopics, filteredInsights, selectedTopicId, rootExpanded, expandedCategoryName, expandedTopicId]
   );
+
+  const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+  const prevFilterRef = useRef(filterTranscriptId);
+
+  // Reset viewport to the default centered "My Knowledge" view. Capping
+  // maxZoom at 1 keeps the size consistent even when only the root node
+  // is rendered (otherwise fitView would zoom in massively on one node).
+  const resetViewport = useCallback(() => {
+    try {
+      sessionStorage.removeItem("mindmap-viewport");
+    } catch {}
+    rfInstanceRef.current?.fitView({ padding: 0.3, maxZoom: 1, duration: 300 });
+  }, []);
+
+  // When the transcript filter changes, reset to the default centered view.
+  useEffect(() => {
+    if (prevFilterRef.current === filterTranscriptId) return;
+    prevFilterRef.current = filterTranscriptId;
+    resetViewport();
+  }, [filterTranscriptId, resetViewport]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_, node) => {
-      // Category node click → toggle expand
+      // Root node click → toggle categories layer
+      if (node.id === "root") {
+        toggleRoot();
+        return;
+      }
+      // Category node click → toggle that category's topics
       const catName = node.data?.catName as string | undefined;
       if (catName) {
         toggleCategory(catName);
         return;
       }
-      // Topic node click → open sidebar
+      // Topic node click → toggle that topic's insights inline
       const topicId = node.data?.topicId as string | undefined;
       if (topicId) {
-        const topic = filteredTopics.find((t) => t.id === topicId);
-        if (topic) setSelectedTopic(topic);
+        toggleTopic(topicId);
+        return;
+      }
+      // Insight node click → open sidebar for its parent topic
+      const parentTopicId = node.data?.parentTopicId as string | undefined;
+      if (parentTopicId) {
+        pushParams({ s: parentTopicId });
       }
     },
-    [filteredTopics, toggleCategory]
+    [toggleRoot, toggleCategory, toggleTopic, pushParams]
   );
 
   const selectedInsights = selectedTopic
@@ -521,12 +693,28 @@ export function MindMapContent({ topics, insights, transcripts }: MindMapContent
               <span className="hidden sm:inline">Dashboard</span>
             </Button>
           </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="shrink-0"
+            title="Back to previous view"
+          >
+            <Undo2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Back</span>
+          </Button>
           <h1 className="text-lg sm:text-xl font-bold text-slate-900">Mind Map</h1>
           <select
             value={filterTranscriptId}
             onChange={(e) => {
-              setFilterTranscriptId(e.target.value);
-              setSelectedTopic(null);
+              const value = e.target.value;
+              pushParams({
+                f: value === "all" ? null : value,
+                e: null,
+                c: null,
+                t: null,
+                s: null,
+              });
             }}
             className="h-11 sm:h-9 w-full sm:w-auto rounded-md border border-input bg-background px-3 text-base sm:text-sm order-last sm:order-none"
           >
@@ -540,6 +728,9 @@ export function MindMapContent({ topics, insights, transcripts }: MindMapContent
           <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
             {filteredTopics.length} topics, {filteredInsights.length} insights
           </span>
+          <div className="ml-auto">
+            <HelpButton />
+          </div>
         </div>
       </header>
 
@@ -557,14 +748,38 @@ export function MindMapContent({ topics, insights, transcripts }: MindMapContent
               edges={edges}
               nodeTypes={nodeTypes}
               onNodeClick={onNodeClick}
-              fitView
-              fitViewOptions={{ padding: 0.3 }}
+              onInit={(instance) => {
+                rfInstanceRef.current = instance;
+                // Restore the viewport the user had before navigating away
+                // (e.g. into a topic detail page and back). Falls back to
+                // a default centered view when no saved viewport exists —
+                // dashboard's Mind Map link clears the saved viewport so
+                // navigating Dashboard → Mind Map lands here.
+                try {
+                  const saved = sessionStorage.getItem("mindmap-viewport");
+                  if (saved) {
+                    instance.setViewport(JSON.parse(saved));
+                    return;
+                  }
+                } catch {}
+                instance.fitView({ padding: 0.3, maxZoom: 1 });
+              }}
+              onMove={(_, viewport) => {
+                try {
+                  sessionStorage.setItem(
+                    "mindmap-viewport",
+                    JSON.stringify(viewport),
+                  );
+                } catch {}
+              }}
               minZoom={0.1}
               maxZoom={2}
               defaultEdgeOptions={{ animated: false }}
             >
               <Background />
-              <Controls showInteractive={false} />
+              <Controls showInteractive={false} showZoom={false} showFitView={false}>
+                <CustomZoomControls />
+              </Controls>
             </ReactFlow>
           )}
         </div>
@@ -577,14 +792,14 @@ export function MindMapContent({ topics, insights, transcripts }: MindMapContent
                   {selectedTopic.name}
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  {selectedTopic.category || "Uncategorized"}
+                  {selectedTopic.category ? formatCategory(selectedTopic.category) : "Uncategorized"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {selectedTopic.description}
                 </p>
               </div>
               <button
-                onClick={() => setSelectedTopic(null)}
+                onClick={() => pushParams({ s: null })}
                 className="shrink-0 p-1 rounded hover:bg-slate-100"
               >
                 <X className="h-4 w-4 text-muted-foreground" />

@@ -10,10 +10,12 @@ export default async function TopicsPage() {
     redirect("/login");
   }
 
-  // Fetch topics with insight counts
+  // Fetch topics with insight counts and parent transcript metadata
   const { data: topics } = await supabase
     .from("topics")
-    .select("id, name, description, created_at, insights(count)")
+    .select(
+      "id, name, description, created_at, transcript_id, transcripts(title, conversation_date, created_at), insights(count)"
+    )
     .order("created_at", { ascending: false });
 
   // Fetch the latest insight date per topic
@@ -32,14 +34,25 @@ export default async function TopicsPage() {
     }
   }
 
-  const topicsWithMeta = (topics || []).map((topic) => ({
-    id: topic.id,
-    name: topic.name,
-    description: topic.description,
-    created_at: topic.created_at,
-    insight_count: (topic.insights as unknown as { count: number }[])?.[0]?.count ?? 0,
-    last_mentioned: latestDateMap[topic.id] || topic.created_at,
-  }));
+  const topicsWithMeta = (topics || []).map((topic) => {
+    const transcript = topic.transcripts as unknown as {
+      title: string | null;
+      conversation_date: string | null;
+      created_at: string;
+    } | null;
+    return {
+      id: topic.id,
+      name: topic.name,
+      description: topic.description,
+      created_at: topic.created_at,
+      transcript_id: topic.transcript_id as string,
+      transcript_title: transcript?.title ?? null,
+      transcript_date:
+        transcript?.conversation_date ?? transcript?.created_at ?? topic.created_at,
+      insight_count: (topic.insights as unknown as { count: number }[])?.[0]?.count ?? 0,
+      last_mentioned: latestDateMap[topic.id] || topic.created_at,
+    };
+  });
 
   return <TopicsContent topics={topicsWithMeta} />;
 }

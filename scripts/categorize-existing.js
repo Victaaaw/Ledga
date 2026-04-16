@@ -35,21 +35,29 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 // 2. Categories and prompt
 // ---------------------------------------------------------------------------
 const CATEGORIES = [
-  "Product & Features",
-  "Technical",
-  "Business & Monetization",
-  "Legal & Compliance",
-  "Go-To-Market",
-  "Personal & Ideas",
-  "Learning",
+  "business_monetisation",
+  "go_to_market",
+  "legal_compliance",
+  "personal_ideas",
+  "product_features",
+  "technical",
 ];
+
+const CATEGORY_DESCRIPTIONS = {
+  business_monetisation: "Revenue, pricing, sales, monetisation strategy",
+  go_to_market: "Launch, marketing, positioning, competitive landscape",
+  legal_compliance: "Legal, compliance, regulations, IP, privacy",
+  personal_ideas: "Personal reflections, brainstorms, life, family",
+  product_features: "Product development, features, UX, technical specs",
+  technical: "Architecture, code, infrastructure, databases",
+};
 
 const SYSTEM_PROMPT =
   "You are a categorization API. Respond with ONLY valid JSON. No explanations, no markdown, no code fences.";
 
 function buildPrompt(name, description) {
   return `Categorize this topic into exactly one of these categories:
-${CATEGORIES.map((c) => `- "${c}"`).join("\n")}
+${CATEGORIES.map((c) => `- "${c}" — ${CATEGORY_DESCRIPTIONS[c]}`).join("\n")}
 
 Topic name: ${name}
 Topic description: ${description}
@@ -62,7 +70,7 @@ Return ONLY a JSON object: {"category": "one of the categories above"}`;
 // ---------------------------------------------------------------------------
 function callClaude(prompt) {
   const result = execSync(
-    `claude -p --output-format json --system-prompt "${SYSTEM_PROMPT.replace(/"/g, '\\"')}"`,
+    `C:\\Users\\User\\.local\\bin\\claude.exe -p --output-format json --system-prompt "${SYSTEM_PROMPT.replace(/"/g, '\\"')}"`,
     {
       input: prompt,
       encoding: "utf-8",
@@ -86,12 +94,11 @@ function callClaude(prompt) {
 // 4. Main
 // ---------------------------------------------------------------------------
 async function main() {
-  console.log("Fetching uncategorized topics...");
+  console.log("Fetching topics needing (re)categorization...");
 
-  const { data: topics, error } = await supabase
+  const { data: allTopics, error } = await supabase
     .from("topics")
-    .select("id, name, description")
-    .is("category", null);
+    .select("id, name, description, category");
 
   if (error) {
     console.error("Failed to fetch topics:", error.message);
@@ -104,12 +111,17 @@ async function main() {
     process.exit(1);
   }
 
-  if (!topics || topics.length === 0) {
-    console.log("All topics are already categorized.");
+  const validSet = new Set(CATEGORIES);
+  const topics = (allTopics || []).filter(
+    (t) => !t.category || !validSet.has(t.category)
+  );
+
+  if (topics.length === 0) {
+    console.log("All topics are already in a valid category.");
     return;
   }
 
-  console.log(`Found ${topics.length} uncategorized topic(s).\n`);
+  console.log(`Found ${topics.length} topic(s) needing (re)categorization.\n`);
 
   let categorized = 0;
 

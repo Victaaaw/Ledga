@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MindMapContent } from "./mindmap-content";
@@ -36,10 +37,12 @@ export default async function MindMapPage() {
   }));
 
   return (
-    <MindMapContent
-      topics={topicsWithCount}
-      insights={insights || []}
-      transcripts={transcripts || []}
-    />
+    <Suspense fallback={null}>
+      <MindMapContent
+        topics={topicsWithCount}
+        insights={insights || []}
+        transcripts={transcripts || []}
+      />
+    </Suspense>
   );
 }

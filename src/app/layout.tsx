@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Ledga - Your AI Conversation Knowledge Library",
-  description: "Transform scattered AI conversations into an organised, searchable knowledge library",
+  title: "NDLedger - Your AI Conversation Knowledge Library",
+  description: "NDLedger - Transform scattered AI conversations into an organised, searchable knowledge library.",
 };
 
 export default function RootLayout({

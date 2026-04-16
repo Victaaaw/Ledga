@@ -42,11 +42,26 @@ const SYSTEM_PROMPT =
 const EXTRACTION_PROMPT = `Extract topics and insights from the following conversation transcript.
 
 Return ONLY a JSON object in this exact format (no other text before or after):
-{"topics":[{"name":"short topic name","description":"one sentence summary","category":"one of the categories below"}],"insights":[{"insight_type":"decision|commitment|insight|pivot","content":"concise summary","context":"relevant quote from transcript","confidence_score":0.95,"topic_name":"must match a topic name above"}]}
+{"topics":[{"name":"short topic name","description":"one sentence summary","category":"one of the categories below"}],"insights":[{"insight_type":"decision|commitment|insight|pivot|task","content":"concise summary","context":"relevant quote from transcript","confidence_score":0.95,"topic_name":"must match a topic name above","context_tag":"personal|business|mixed"}]}
 
 Rules:
-- category MUST be one of: "Product & Features", "Technical", "Business & Monetization", "Legal & Compliance", "Go-To-Market", "Personal & Ideas", "Learning"
-- insight_type MUST be one of: "decision", "commitment", "insight", "pivot"
+- category MUST be one of: "business_monetisation", "go_to_market", "legal_compliance", "personal_ideas", "product_features", "technical"
+  - "business_monetisation" = revenue, pricing, sales, monetisation strategy
+  - "go_to_market" = launch, marketing, positioning, competitive landscape
+  - "legal_compliance" = legal, compliance, regulations, IP, privacy
+  - "personal_ideas" = personal reflections, brainstorms, life, family
+  - "product_features" = product development, features, UX, technical specs
+  - "technical" = architecture, code, infrastructure, databases
+- insight_type MUST be one of: "decision", "commitment", "insight", "pivot", "task"
+  - "decision" = a choice that has been made
+  - "commitment" = a promise or agreement to do something
+  - "insight" = a realisation, learning, or observation
+  - "pivot" = a change in direction or approach
+  - "task" = an actionable item that needs to be done, often time-bound (e.g. "follow up next week", "send the proposal", "book a meeting with X", "register the domain"). Tasks are concrete to-dos, not commitments to a person and not abstract decisions.
+- context_tag MUST be one of: "personal", "business", "mixed"
+  - "personal" = family, health, life admin, hobbies, self-reflection
+  - "business" = ventures, clients, products, revenue, partnerships
+  - "mixed" = clearly overlaps both personal and business (e.g. a family-run business decision, a hobby being monetised). Only use "mixed" when both sides are genuinely present — when in doubt, pick the dominant one.
 - topic_name MUST match the name of a topic in the topics array
 - confidence_score MUST be a number between 0.0 and 1.0
 - Output NOTHING except the JSON object — no markdown fences, no explanation`;
@@ -57,7 +72,7 @@ Rules:
 function callClaude(transcript) {
   const userMessage = `${EXTRACTION_PROMPT}\n\n--- TRANSCRIPT ---\n${transcript}`;
   const result = execSync(
-    `claude -p --output-format json --system-prompt "${SYSTEM_PROMPT.replace(/"/g, '\\"')}"`,
+    `C:\\Users\\User\\.local\\bin\\claude.exe -p --output-format json --system-prompt "${SYSTEM_PROMPT.replace(/"/g, '\\"')}"`,
     {
       input: userMessage,
       encoding: "utf-8",
@@ -153,6 +168,7 @@ async function processTranscript(transcript) {
       content: i.content,
       context: i.context,
       confidence_score: i.confidence_score,
+      context_tag: i.context_tag ?? null,
     }));
 
     const { error: insightError } = await supabase

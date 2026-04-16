@@ -1,4 +1,4 @@
-# Ledga App
+# NDLedger
 
 Your AI conversation knowledge library.
 
