@@ -1,6 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { execSync } from "child_process";
+import Anthropic from "@anthropic-ai/sdk";
+
+// =============================================================================
+// CONFIG
+// =============================================================================
+
+const MODEL_ID = "claude-haiku-4-5";
+
+// Guardrail: reject transcripts over this size before spending money on the API.
+// ~50k tokens ≈ 200k characters ≈ a very long document. Real user transcripts
+// should be well under this. Acts as a sanity check, not a typical limit.
+const MAX_TRANSCRIPT_CHARS = 200_000;
+
+// =============================================================================
+// PROMPTS
+// =============================================================================
 
 const SYSTEM_PROMPT =
   "You are a JSON-only extraction API. You MUST respond with ONLY valid JSON. No explanations, no markdown, no code fences, no conversational text. Your entire response must be parseable by JSON.parse().";
@@ -32,6 +47,10 @@ Rules:
 - confidence_score MUST be a number between 0.0 and 1.0
 - Output NOTHING except the JSON object — no markdown fences, no explanation`;
 
+// =============================================================================
+// TYPES
+// =============================================================================
+
 interface ExtractedTopic {
   name: string;
   description: string;
@@ -52,51 +71,49 @@ interface ExtractionResult {
   insights: ExtractedInsight[];
 }
 
-function callClaude(transcript: string): string {
+interface CallClaudeResult {
+  text: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+// =============================================================================
+// ANTHROPIC API CALL (replaces the old CLI version)
+// =============================================================================
+
+async function callClaude(transcript: string): Promise<CallClaudeResult> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY environment variable is not set");
+  }
+
+  const client = new Anthropic({ apiKey });
+
   const userMessage = `${EXTRACTION_PROMPT}\n\n--- TRANSCRIPT ---\n${transcript}`;
 
-  let rawOutput: string;
-  try {
-    rawOutput = execSync(
-      `C:\\Users\\User\\.local\\bin\\claude.exe -p --output-format json --system-prompt "${SYSTEM_PROMPT.replace(/"/g, '\\"')}"`,
-      {
-        input: userMessage,
-        encoding: "utf-8" as const,
-        maxBuffer: 10 * 1024 * 1024,
-        timeout: 120_000,
-        shell: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-        windowsHide: true,
-      },
-    );
-  } catch (execErr: unknown) {
-    const e = execErr as { status?: number; stderr?: string; stdout?: string };
-    console.error("[callClaude] execSync failed");
-    console.error("[callClaude] exit code:", e.status);
-    console.error("[callClaude] stderr:", e.stderr);
-    console.error("[callClaude] stdout:", e.stdout);
-    throw execErr;
+  const response = await client.messages.create({
+    model: MODEL_ID,
+    max_tokens: 4096,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userMessage }],
+  });
+
+  // Extract text from response content blocks
+  const textBlock = response.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("Claude API returned no text content");
   }
 
-  console.log("[callClaude] raw CLI output:", rawOutput.slice(0, 500));
-
-  let cliResponse: Record<string, unknown>;
-  try {
-    cliResponse = JSON.parse(rawOutput);
-  } catch {
-    console.error("[callClaude] Failed to parse CLI JSON wrapper. Full output:");
-    console.error(rawOutput);
-    throw new Error("Claude CLI returned non-JSON output");
-  }
-
-  if (cliResponse.is_error) {
-    console.error("[callClaude] CLI reported error:", cliResponse.result);
-    throw new Error(`Claude CLI error: ${cliResponse.result}`);
-  }
-
-  const text = cliResponse.result ?? cliResponse.text ?? rawOutput;
-  if (typeof text === "object") return JSON.stringify(text);
-  return text as string;
+  return {
+    text: textBlock.text,
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+  };
 }
+
+// =============================================================================
+// ROUTE HANDLER
+// =============================================================================
 
 export async function POST(request: Request) {
   try {
@@ -143,45 +160,75 @@ export async function POST(request: Request) {
       );
     }
 
+    // Guardrail: reject transcripts that are unreasonably large before spending money
+    if (transcript.raw_content.length > MAX_TRANSCRIPT_CHARS) {
+      await supabase
+        .from("transcripts")
+        .update({
+          processing_status: "failed",
+          processing_error: `Transcript too large: ${transcript.raw_content.length} characters (max ${MAX_TRANSCRIPT_CHARS}). Please split into smaller sections.`,
+        })
+        .eq("id", transcriptId);
+
+      return NextResponse.json(
+        {
+          error: "Transcript too large",
+          details: `Max size is ${MAX_TRANSCRIPT_CHARS} characters. Yours is ${transcript.raw_content.length}.`,
+        },
+        { status: 413 }
+      );
+    }
+
     // Mark as processing
     await supabase
       .from("transcripts")
       .update({ processing_status: "processing" })
       .eq("id", transcriptId);
 
-    // Call Claude Code CLI for extraction
-    let responseText: string;
+    // Call Anthropic API for extraction
+    let apiResult: CallClaudeResult;
     try {
-      responseText = callClaude(transcript.raw_content);
+      apiResult = await callClaude(transcript.raw_content);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("[extract] CLI call failed for transcript", transcriptId, message);
+      console.error(
+        "[extract] API call failed for transcript",
+        transcriptId,
+        message
+      );
       await supabase
         .from("transcripts")
         .update({
           processing_status: "failed",
-          processing_error: `CLI extraction failed: ${message}`,
+          processing_error: `API extraction failed: ${message}`,
         })
         .eq("id", transcriptId);
 
       return NextResponse.json(
-        { error: "Claude CLI extraction failed" },
+        { error: "Claude API extraction failed" },
         { status: 500 }
       );
     }
 
-    // Strip markdown code fences if present
-    responseText = responseText
-      .replace(/^```(?:json)?\s*\n?/, "")
-      .replace(/\n?```\s*$/, "");
+    // Log token usage for cost tracking
+    console.log(
+      `[extract] Tokens used — input: ${apiResult.inputTokens}, output: ${apiResult.outputTokens}`
+    );
 
-    console.log("[extract] Claude response to parse:", responseText.slice(0, 500));
+    // Strip markdown code fences if Claude returned any despite the prompt
+    const responseText = apiResult.text
+      .replace(/^```(?:json)?\s*\n?/, "")
+      .replace(/\n?```\s*$/, "")
+      .trim();
 
     let extraction: ExtractionResult;
     try {
       extraction = JSON.parse(responseText);
     } catch (parseErr) {
-      console.error("[extract] JSON parse failed for transcript", transcriptId);
+      console.error(
+        "[extract] JSON parse failed for transcript",
+        transcriptId
+      );
       console.error("[extract] Parse error:", parseErr);
       console.error("[extract] Full responseText:", responseText);
       await supabase
@@ -189,6 +236,8 @@ export async function POST(request: Request) {
         .update({
           processing_status: "failed",
           processing_error: "Failed to parse AI extraction response",
+          input_tokens: apiResult.inputTokens,
+          output_tokens: apiResult.outputTokens,
         })
         .eq("id", transcriptId);
 
@@ -199,21 +248,16 @@ export async function POST(request: Request) {
     }
 
     // Merge extracted topics with existing ones by name (case-insensitive).
-    // topicMap is keyed by NORMALIZED name so insights can resolve reliably even
-    // if the LLM uses inconsistent casing between topic and insight references.
     const normalizeName = (n: string) => n.trim().toLowerCase();
     const topicMap = new Map<string, string>();
 
     if (extraction.topics && extraction.topics.length > 0) {
-      // Dedupe extracted topics by normalized name (keep first occurrence's metadata)
       const uniqueExtracted = new Map<string, ExtractedTopic>();
       for (const t of extraction.topics) {
         const key = normalizeName(t.name);
         if (key && !uniqueExtracted.has(key)) uniqueExtracted.set(key, t);
       }
 
-      // Fetch this user's existing topics so we can match by name (case-insensitive).
-      // RLS already scopes by user, but we add the explicit filter for clarity.
       const { data: existingTopics, error: existingError } = await supabase
         .from("topics")
         .select("id, name")
@@ -225,6 +269,8 @@ export async function POST(request: Request) {
           .update({
             processing_status: "failed",
             processing_error: `Failed to load existing topics: ${existingError.message}`,
+            input_tokens: apiResult.inputTokens,
+            output_tokens: apiResult.outputTokens,
           })
           .eq("id", transcriptId);
 
@@ -239,7 +285,6 @@ export async function POST(request: Request) {
         existingByName.set(normalizeName(t.name), t.id);
       }
 
-      // Partition: reuse existing ids, collect new topics to insert.
       const topicsToInsert: ExtractedTopic[] = [];
       for (const [key, topic] of uniqueExtracted) {
         const existingId = existingByName.get(key);
@@ -250,8 +295,6 @@ export async function POST(request: Request) {
         }
       }
 
-      // Insert only the new ones. transcript_id on new topics records the
-      // first transcript that created them; merged topics keep their original.
       if (topicsToInsert.length > 0) {
         const topicRows = topicsToInsert.map((topic) => ({
           user_id: user.id,
@@ -272,6 +315,8 @@ export async function POST(request: Request) {
             .update({
               processing_status: "failed",
               processing_error: `Failed to insert topics: ${topicError.message}`,
+              input_tokens: apiResult.inputTokens,
+              output_tokens: apiResult.outputTokens,
             })
             .eq("id", transcriptId);
 
@@ -314,6 +359,8 @@ export async function POST(request: Request) {
           .update({
             processing_status: "failed",
             processing_error: `Failed to insert insights: ${insightError.message}`,
+            input_tokens: apiResult.inputTokens,
+            output_tokens: apiResult.outputTokens,
           })
           .eq("id", transcriptId);
 
@@ -326,12 +373,14 @@ export async function POST(request: Request) {
       insightsCount = insightRows.length;
     }
 
-    // Mark transcript as completed
+    // Mark transcript as completed and log token counts
     await supabase
       .from("transcripts")
       .update({
         processing_status: "completed",
         processed_at: new Date().toISOString(),
+        input_tokens: apiResult.inputTokens,
+        output_tokens: apiResult.outputTokens,
       })
       .eq("id", transcriptId);
 
@@ -340,6 +389,10 @@ export async function POST(request: Request) {
       transcriptId,
       topicsExtracted: topicMap.size,
       insightsExtracted: insightsCount,
+      tokensUsed: {
+        input: apiResult.inputTokens,
+        output: apiResult.outputTokens,
+      },
     });
   } catch (error) {
     console.error("Extraction error:", error);
