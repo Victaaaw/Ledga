@@ -286,7 +286,7 @@ export async function POST(request: Request) {
       }
 
       const topicsToInsert: ExtractedTopic[] = [];
-      for (const [key, topic] of uniqueExtracted) {
+      for (const [key, topic] of Array.from(uniqueExtracted.entries())) {
         const existingId = existingByName.get(key);
         if (existingId) {
           topicMap.set(key, existingId);
