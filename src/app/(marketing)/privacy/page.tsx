@@ -44,16 +44,26 @@ export default function PrivacyPage() {
           <h1 className="text-3xl sm:text-4xl font-bold text-[#1E3A5F] mb-2">
             Privacy Policy
           </h1>
-          <p className="text-sm text-slate-500 mb-10">Last updated: April 2026</p>
+          <p className="text-sm text-slate-500 mb-10">Last updated: 20 April 2026</p>
 
-          <Section title="1. What We Collect">
+          <Section title="1. Who We Are">
+            <p>
+              NDLedger is operated by AREASPEC PTY LTD (ACN 690 941 078), an
+              Australian company based in Ipswich, Queensland. References in
+              this policy to &quot;we&quot;, &quot;us&quot;, or
+              &quot;NDLedger&quot; mean AREASPEC PTY LTD trading as NDLedger.
+            </p>
+          </Section>
+
+          <Section title="2. What We Collect">
             <p>We collect the minimum information needed to run NDLedger:</p>
             <ul>
               <li>
                 <strong>Email address</strong> — used for account authentication.
               </li>
               <li>
-                <strong>Conversation transcripts</strong> that you upload.
+                <strong>Conversation transcripts</strong> that you upload —
+                used only for extraction, then deleted (see Section 5).
               </li>
               <li>
                 <strong>Extracted insights, topics, decisions, tasks, and
@@ -68,11 +78,11 @@ export default function PrivacyPage() {
               <strong>Voice recordings are processed locally</strong> in your
               browser using the Web Speech API. The resulting text is sent to
               NDLedger for extraction, but the audio itself is never uploaded
-              or stored.
+              to or stored by us.
             </p>
           </Section>
 
-          <Section title="2. How We Use Data">
+          <Section title="3. How We Use Data">
             <p>We use your data only to:</p>
             <ul>
               <li>Provide the NDLedger service,</li>
@@ -85,7 +95,7 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="3. Data Storage">
+          <Section title="4. Data Storage">
             <p>
               Your data is stored on Supabase servers in Sydney, Australia.
               Data is encrypted in transit using TLS and encrypted at rest on
@@ -94,14 +104,37 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="4. Third Parties">
+          <Section title="5. Data Retention">
+            <p>
+              Transcripts are deleted automatically after extraction is
+              complete. We do not retain the raw content of your
+              conversations.
+            </p>
+            <p>
+              Extracted insights, topics, decisions, tasks, and commitments are
+              retained until you delete them. You can delete individual
+              insights — which cascades to related topics — or delete your
+              entire account via Settings.
+            </p>
+            <p>
+              Account data (email address) is retained while your account is
+              active. If your account is inactive for more than 24 months, we
+              may delete it along with all associated data in accordance with
+              Australian Privacy Principle 11.2 (destruction or de-identification
+              of personal information no longer needed).
+            </p>
+          </Section>
+
+          <Section title="6. Third Parties">
             <p>NDLedger relies on the following third-party services:</p>
             <ul>
               <li>
-                <strong>Supabase</strong> — database and authentication.
+                <strong>Supabase</strong> — database and authentication. Hosted
+                in Sydney, Australia.
               </li>
               <li>
-                <strong>Vercel</strong> — application hosting.
+                <strong>Vercel</strong> — application hosting. May process IP
+                addresses and request logs.
               </li>
               <li>
                 <strong>Anthropic (Claude)</strong> — AI processing. Transcripts
@@ -109,31 +142,43 @@ export default function PrivacyPage() {
                 API content is processed to return a response and is not
                 retained or used for training.
               </li>
+              <li>
+                <strong>Cloudflare</strong> — DNS and email routing. Cloudflare
+                does not process the content of your transcripts or insights.
+              </li>
             </ul>
           </Section>
 
-          <Section title="5. Data Retention">
+          <Section title="7. Your Rights">
             <p>
-              Your data is kept until you delete it. You can delete individual
-              transcripts — which cascades to the topics and insights extracted
-              from them — or delete your entire account via Settings.
+              Under the Australian Privacy Principles, you have the right to:
             </p>
-          </Section>
-
-          <Section title="6. Your Rights">
-            <p>You can, at any time:</p>
             <ul>
               <li>Access your data through the app,</li>
-              <li>Delete your data through the app, and</li>
-              <li>Correct your data through the app.</li>
+              <li>Delete your data through the app,</li>
+              <li>
+                Request correction of your data by contacting us at
+                privacy@ndledger.com, and
+              </li>
+              <li>
+                Request information about how your data is handled by
+                contacting us.
+              </li>
             </ul>
+          </Section>
+
+          <Section title="8. Data Breach Notification">
             <p>
-              A dedicated data export feature is not yet available. If you need
-              an export before we ship it, contact us.
+              We comply with the Notifiable Data Breaches scheme under Part
+              IIIC of the Privacy Act 1988 (Cth). If a data breach occurs that
+              is likely to result in serious harm to affected individuals, we
+              will notify those individuals and the Office of the Australian
+              Information Commissioner (OAIC) as soon as reasonably
+              practicable.
             </p>
           </Section>
 
-          <Section title="7. Cookies">
+          <Section title="9. Cookies">
             <p>
               NDLedger uses session cookies for authentication only. We do not
               use tracking cookies, advertising cookies, or third-party
@@ -141,7 +186,7 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="8. Children">
+          <Section title="10. Children">
             <p>
               NDLedger is not intended for users under 18. We do not knowingly
               collect data from children. If you believe a child has provided
@@ -149,7 +194,7 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="9. Australian Privacy Act">
+          <Section title="11. Australian Privacy Act">
             <p>
               NDLedger complies with the Australian Privacy Principles (APPs)
               under the Privacy Act 1988 (Cth). If you believe we have breached
@@ -167,14 +212,15 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="10. International Users">
+          <Section title="12. International Users">
             <p>
               If you access NDLedger from outside Australia, your data will be
-              transferred to and stored in Australia.
+              transferred to and stored in Australia. By using NDLedger, you
+              consent to this transfer.
             </p>
           </Section>
 
-          <Section title="11. Security">
+          <Section title="13. Security">
             <p>
               We use industry-standard security measures including TLS
               encryption in transit, encryption at rest, and Row Level Security
@@ -183,21 +229,22 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="12. Contact">
+          <Section title="14. Contact">
             <p>
               Questions about this policy or how your data is handled?
             </p>
             <ul>
               <li>
-                <strong>Email:</strong> hobbesinvestments@gmail.com
+                <strong>Email:</strong> privacy@ndledger.com
               </li>
               <li>
-                <strong>Address:</strong> Ipswich, Queensland, Australia 4305
+                <strong>Address:</strong> AREASPEC PTY LTD (ACN 690 941 078),
+                Ipswich, Queensland, Australia 4305
               </li>
             </ul>
           </Section>
 
-          <Section title="13. Changes to This Policy">
+          <Section title="15. Changes to This Policy">
             <p>
               We may update this policy from time to time. If we make material
               changes, we will notify you by email or through an in-app notice
