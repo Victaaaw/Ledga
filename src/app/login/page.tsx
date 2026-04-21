@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ function logSupabaseCookies(label: string) {
   );
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -129,116 +129,124 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-6 sm:p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center px-4 sm:px-6">
-          <CardTitle className="text-xl sm:text-2xl font-bold">Welcome to NDLedger</CardTitle>
-          <CardDescription>
-            Your AI conversation knowledge library
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center px-4 sm:px-6">
+        <CardTitle className="text-xl sm:text-2xl font-bold">Welcome to NDLedger</CardTitle>
+        <CardDescription>
+          Your AI conversation knowledge library
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium">
+              Email address
+            </label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
+          {mode !== "magic-link" && (
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email address
+              <label htmlFor="password" className="text-sm font-medium">
+                Password
               </label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                minLength={6}
               />
             </div>
+          )}
 
-            {mode !== "magic-link" && (
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  minLength={6}
-                />
-              </div>
-            )}
+          {message && (
+            <div
+              className={`p-3 rounded-md text-sm ${
+                message.type === "success"
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-red-50 text-red-700 border border-red-200"
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
 
-            {message && (
-              <div
-                className={`p-3 rounded-md text-sm ${
-                  message.type === "success"
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-red-50 text-red-700 border border-red-200"
-                }`}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {buttonLabel[mode]}
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center text-sm text-muted-foreground space-y-2">
+          {mode === "magic-link" ? (
+            <>
+              <p>No password needed. We&apos;ll email you a secure link.</p>
+              <button
+                type="button"
+                onClick={() => { setMode("sign-in"); setMessage(null); }}
+                className="text-primary hover:underline"
               >
-                {message.text}
-              </div>
-            )}
+                Use password instead
+              </button>
+            </>
+          ) : mode === "sign-in" ? (
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => { setMode("magic-link"); setPassword(""); setMessage(null); }}
+                className="text-primary hover:underline"
+              >
+                Use magic link instead
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("sign-up"); setMessage(null); }}
+                className="text-primary hover:underline"
+              >
+                Don&apos;t have an account? Sign up
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => { setMode("sign-in"); setMessage(null); }}
+                className="text-primary hover:underline"
+              >
+                Already have an account? Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("magic-link"); setPassword(""); setMessage(null); }}
+                className="text-primary hover:underline"
+              >
+                Use magic link instead
+              </button>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {buttonLabel[mode]}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-muted-foreground space-y-2">
-            {mode === "magic-link" ? (
-              <>
-                <p>No password needed. We&apos;ll email you a secure link.</p>
-                <button
-                  type="button"
-                  onClick={() => { setMode("sign-in"); setMessage(null); }}
-                  className="text-primary hover:underline"
-                >
-                  Use password instead
-                </button>
-              </>
-            ) : mode === "sign-in" ? (
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setMode("magic-link"); setPassword(""); setMessage(null); }}
-                  className="text-primary hover:underline"
-                >
-                  Use magic link instead
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setMode("sign-up"); setMessage(null); }}
-                  className="text-primary hover:underline"
-                >
-                  Don&apos;t have an account? Sign up
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setMode("sign-in"); setMessage(null); }}
-                  className="text-primary hover:underline"
-                >
-                  Already have an account? Sign in
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setMode("magic-link"); setPassword(""); setMessage(null); }}
-                  className="text-primary hover:underline"
-                >
-                  Use magic link instead
-                </button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+export default function LoginPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-3 py-6 sm:p-4">
+      <Suspense fallback={<Card className="w-full max-w-md"><CardContent className="p-6">Loading...</CardContent></Card>}>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
