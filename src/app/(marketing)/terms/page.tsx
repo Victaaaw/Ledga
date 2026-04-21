@@ -265,9 +265,9 @@ export default function TermsPage() {
             <Link href="/privacy" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
-              Terms of Service
-            </Link>
+           <Link href="/terms" className="text-[#5EEAD4] font-medium">
+  Terms of Service
+</Link>
            <a href="mailto:privacy@ndledger.com" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
               Contact
             </a>

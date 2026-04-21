@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             </Link>
             <Link
               href="/login"
-              className="text-sm font-medium text-[#1E3A5F] hover:text-[#0D9488]"
+              className="hidden sm:inline-block text-sm font-medium text-[#1E3A5F] hover:text-[#0D9488]"
             >
               Sign in
             </Link>
@@ -268,9 +268,9 @@ export default function PrivacyPage() {
             className="h-10 w-auto"
           />
           <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
-            <Link href="/privacy" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
-              Privacy Policy
-            </Link>
+            <Link href="/privacy" className="text-[#5EEAD4] font-medium">
+  Privacy Policy
+</Link>
             <Link href="/terms" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
               Terms of Service
             </Link>
