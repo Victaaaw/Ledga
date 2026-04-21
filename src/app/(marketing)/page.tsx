@@ -134,7 +134,7 @@ export default async function MarketingHome() {
       <section className="px-4 py-16 sm:py-20 bg-[#F8FAFC]">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-[#1E3A5F]">
-            Frequently asked
+           FAQs
           </h2>
           <div className="space-y-3">
             <Faq
@@ -143,7 +143,7 @@ export default async function MarketingHome() {
             />
             <Faq
               q="How does extraction work?"
-              a="When you upload a transcript, Claude reads through it and identifies discrete topics and the insights tied to each one. Each insight is tagged by type (decision, commitment, insight, pivot, or task) and by personal/business context, then stored in your library and linked to the originating transcript."
+              a="When you upload a transcript, Claude reads through it and identifies discrete topics and the insights tied to each one. Each insight is tagged by type (decision, commitment, insight, pivot, or task) and by personal/business context, then stored in your library. The original transcript is deleted after extraction; only the extracted insights are kept."
             />
             <Faq
               q="What are the categories?"
@@ -155,7 +155,7 @@ export default async function MarketingHome() {
             />
             <Faq
               q="How do I delete my data?"
-              a="Go to Settings → Danger Zone → Delete My Account. This permanently removes every transcript, topic, and insight tied to your account, plus the account itself. The action cannot be undone."
+              a="You can delete individual transcripts and their associated insights from your dashboard at any time. To remove everything, go to Settings → Danger Zone → Delete My Account. This permanently removes every transcript, topic, and insight tied to your account, plus the account itself. The action cannot be undone."
             />
           </div>
         </div>
