@@ -40,7 +40,18 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("[auth/callback] exchangeCodeForSession failed:", error);
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+
+    // PKCE failure — user clicked the magic link in a different browser
+    // context from where it was requested. The code-verifier cookie only
+    // exists in the originating browser, so the exchange can't complete.
+    // Surface a specific error so the login page can show useful guidance.
+    const isPkceError =
+      error.message?.toLowerCase().includes("code verifier") ||
+      error.message?.toLowerCase().includes("code_verifier") ||
+      error.message?.toLowerCase().includes("pkce");
+
+    const errorParam = isPkceError ? "link_expired" : "auth_failed";
+    return NextResponse.redirect(`${origin}/login?error=${errorParam}`);
   }
 
   return response;

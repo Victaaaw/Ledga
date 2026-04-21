@@ -373,7 +373,9 @@ export async function POST(request: Request) {
       insightsCount = insightRows.length;
     }
 
-    // Mark transcript as completed and log token counts
+    // Mark transcript as completed, log token counts, and null out raw_content.
+    // Privacy Policy promises transcripts are deleted after extraction — we keep
+    // the row for audit/cost tracking but wipe the actual content.
     await supabase
       .from("transcripts")
       .update({
@@ -381,6 +383,7 @@ export async function POST(request: Request) {
         processed_at: new Date().toISOString(),
         input_tokens: apiResult.inputTokens,
         output_tokens: apiResult.outputTokens,
+        raw_content: null,
       })
       .eq("id", transcriptId);
 

@@ -57,6 +57,7 @@ export default async function MarketingHome() {
             width={1536}
             height={1024}
             className="mx-auto h-24 w-auto mb-8"
+            style={{ height: "auto", maxHeight: "6rem" }}
             priority
           />
           <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
@@ -177,7 +178,7 @@ export default async function MarketingHome() {
             <Link href="/terms" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
               Terms of Service
             </Link>
-            <a href="#" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
+            <a href="mailto:privacy@ndledger.com" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
               Contact
             </a>
           </nav>

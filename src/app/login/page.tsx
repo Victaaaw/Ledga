@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,11 +27,31 @@ function logSupabaseCookies(label: string) {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Surface auth errors that arrive via query param from the callback handler.
+  // link_expired = PKCE failure (magic link opened in a different browser
+  // context from where it was requested). auth_failed = generic fallback.
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "link_expired") {
+      setMode("magic-link");
+      setMessage({
+        type: "error",
+        text: "That magic link didn't work. This usually happens when the link is opened in a different browser from where you requested it. Request a new link below and make sure you open it in this browser.",
+      });
+    } else if (errorParam === "auth_failed") {
+      setMessage({
+        type: "error",
+        text: "Sign-in didn't complete. Please try again.",
+      });
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

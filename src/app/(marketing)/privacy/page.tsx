@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-white text-slate-900">
       <header className="border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" aria-label="NDLedger home">
             <Image
               src="/logo.png"
               alt="NDLedger logo"
@@ -20,7 +20,6 @@ export default function PrivacyPage() {
               className="h-10 w-auto"
               priority
             />
-            <span className="text-lg font-bold text-[#1E3A5F]">NDLedger</span>
           </Link>
           <div className="flex items-center gap-6">
             <Link
@@ -48,10 +47,10 @@ export default function PrivacyPage() {
 
           <Section title="1. Who We Are">
             <p>
-              NDLedger is operated by AREASPEC PTY LTD (ACN 690 941 078), an
-              Australian company based in Ipswich, Queensland. References in
-              this policy to &quot;we&quot;, &quot;us&quot;, or
-              &quot;NDLedger&quot; mean AREASPEC PTY LTD trading as NDLedger.
+              NDLedger is operated by AREASPEC PTY LTD (ACN 690 941 078), the
+              Australian company based in Ipswich, Queensland behind
+              NDLedger. References in this policy to &quot;we&quot;,
+              &quot;us&quot;, or &quot;NDLedger&quot; mean AREASPEC PTY LTD.
             </p>
           </Section>
 
@@ -261,24 +260,21 @@ export default function PrivacyPage() {
 
       <footer className="px-4 py-10 bg-[#1E3A5F] text-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/logo.png"
-              alt="NDLedger logo"
-              width={1536}
-              height={1024}
-              className="h-10 w-auto"
-            />
-            <span className="font-semibold">NDLedger</span>
-          </div>
+          <Image
+            src="/logo.png"
+            alt="NDLedger logo"
+            width={1536}
+            height={1024}
+            className="h-10 w-auto"
+          />
           <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
             <Link href="/privacy" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
               Privacy Policy
             </Link>
-            <a href="#" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
+            <Link href="/terms" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
               Terms of Service
-            </a>
-            <a href="#" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
+            </Link>
+            <a href="mailto:privacy@ndledger.com" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
               Contact
             </a>
           </nav>
