@@ -22,18 +22,18 @@ export default function PrivacyPage() {
             />
           </Link>
           <div className="flex items-center gap-6">
+           <Link
+  href="/"
+  className="hidden sm:inline-block text-sm font-medium text-[#1E3A5F] hover:text-[#0D9488]"
+>
+  ← Back to home
+</Link>
             <Link
-              href="/"
-              className="text-sm font-medium text-[#1E3A5F] hover:text-[#0D9488]"
-            >
-              ← Back to home
-            </Link>
-            <Link
-              href="/login"
-              className="hidden sm:inline-block text-sm font-medium text-[#1E3A5F] hover:text-[#0D9488]"
-            >
-              Sign in
-            </Link>
+  href="/login"
+  className="text-sm font-medium text-[#1E3A5F] hover:text-[#0D9488]"
+>
+  Sign in
+</Link>
           </div>
         </div>
       </header>
