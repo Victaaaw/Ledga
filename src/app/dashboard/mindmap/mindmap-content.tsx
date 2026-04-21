@@ -254,7 +254,7 @@ const hoverStyles = `
 
 // --- Layout constants ---
 const ROOT_WIDTH = 280;
-const CATEGORY_WIDTH = 240;
+const CATEGORY_WIDTH = 320;
 const TOPIC_WIDTH = 280;
 const INSIGHT_WIDTH = 240;
 
