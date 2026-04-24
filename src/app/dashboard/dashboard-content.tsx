@@ -12,7 +12,7 @@ import { LogOut, Upload, FileText, Lightbulb, Clock, Hash, Search, GitBranch, Me
 import Link from "next/link";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { HelpButton } from "@/components/help-button";
-
+import { DebugLogPanel } from "@/components/debug-log-panel";
 interface Transcript {
   id: string;
   title: string | null;
@@ -690,6 +690,6 @@ const stopRecording = () => {
           </div>
         </div>
       </main>
+      <DebugLogPanel />
     </div>
   );
-}
