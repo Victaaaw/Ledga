@@ -64,11 +64,15 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
   // transcription appends instead of overwriting; finalTranscriptRef
   // accumulates finalised chunks across multiple onresult events.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
+ const recognitionRef = useRef<any>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const baseContentRef = useRef("");
   const finalTranscriptRef = useRef("");
-
+  // Tracks whether onend was triggered by user action (Stop/Cancel/error)
+  // or by mobile browser auto-stopping on silence. If auto-stopped mid-
+  // recording, we transparently restart the session so finalTranscriptRef
+  // continues accumulating.
+  const userStoppedRef = useRef(false);
   useEffect(() => {
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
       setSpeechSupported(true);
@@ -99,6 +103,7 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
 
     baseContentRef.current = content;
     finalTranscriptRef.current = "";
+    userStoppedRef.current = false;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognition = (window as any).webkitSpeechRecognition;
@@ -131,6 +136,8 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onerror = (event: any) => {
+      // Real errors should NOT trigger auto-restart in onend.
+      userStoppedRef.current = true;
       setRecordingError(
         event.error === "not-allowed"
           ? "Microphone permission denied. Enable mic access in your browser."
@@ -138,14 +145,22 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
       );
     };
 
-    recognition.onend = () => {
-      // Fires after stop(), abort(), error, or auto-stop on silence.
-      // Idempotent cleanup — safe to call regardless of how we got here.
+   recognition.onend = () => {
+      console.log("[onend] fired. userStopped:", userStoppedRef.current, "finalRef:", JSON.stringify(finalTranscriptRef.current), "baseRef:", JSON.stringify(baseContentRef.current));
+      if (!userStoppedRef.current) {
+        try {
+          recognition.start();
+          console.log("[onend] restarted successfully");
+          return;
+        } catch (e) {
+          console.log("[onend] restart failed:", e);
+        }
+      }
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
       }
-      // Drop any trailing interim by recomposing from base + finalised.
+      console.log("[onend] final setContent with:", JSON.stringify(composeContent(baseContentRef.current, finalTranscriptRef.current)));
       setContent(composeContent(baseContentRef.current, finalTranscriptRef.current));
       setIsRecording(false);
       recognitionRef.current = null;
@@ -166,13 +181,15 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
     }
   };
 
-  const stopRecording = () => {
+const stopRecording = () => {
     if (!recognitionRef.current) return;
+    userStoppedRef.current = true;
     try { recognitionRef.current.stop(); } catch {}
     // onend will finalise content and reset isRecording.
   };
 
   const cancelRecording = () => {
+    userStoppedRef.current = true;
     // Wipe the accumulator first so onend's recompute restores baseContent.
     finalTranscriptRef.current = "";
     setContent(baseContentRef.current);
