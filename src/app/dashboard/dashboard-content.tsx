@@ -693,3 +693,4 @@ const stopRecording = () => {
       <DebugLogPanel />
     </div>
   );
+}
