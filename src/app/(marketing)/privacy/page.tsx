@@ -43,7 +43,7 @@ export default function PrivacyPage() {
           <h1 className="text-3xl sm:text-4xl font-bold text-[#1E3A5F] mb-2">
             Privacy Policy
           </h1>
-          <p className="text-sm text-slate-500 mb-10">Last updated: 20 April 2026</p>
+          <p className="text-sm text-slate-500 mb-10">Last updated: 27 April 2026</p>
 
           <Section title="1. Who We Are">
             <p>
@@ -74,11 +74,13 @@ export default function PrivacyPage() {
               </li>
             </ul>
             <p>
-              <strong>Voice recordings are processed locally</strong> in your
-              browser using the Web Speech API. The resulting text is sent to
-              NDLedger for extraction, but the audio itself is never uploaded
-              to or stored by us.
-            </p>
+  <strong>Voice recordings</strong> are captured in your browser and
+  uploaded to OpenAI&apos;s Whisper service for transcription. The
+  resulting text is then sent to NDLedger for extraction. Audio is
+  sent to OpenAI solely for transcription and is not retained by
+  OpenAI beyond the duration of the API call, per OpenAI&apos;s
+  API data usage policy. NDLedger does not store your audio.
+</p>
           </Section>
 
           <Section title="3. How We Use Data">
@@ -140,6 +142,13 @@ export default function PrivacyPage() {
                 are sent to Claude for extraction. Per Anthropic&apos;s policy,
                 API content is processed to return a response and is not
                 retained or used for training.
+              </li>
+              <li>
+                <strong>OpenAI (Whisper)</strong> — voice transcription. Audio
+                you record is sent to OpenAI&apos;s Whisper API for
+                transcription. Per OpenAI&apos;s API data usage policy, audio
+                submitted via the API is not used to train OpenAI models and
+                is not retained beyond the API call.
               </li>
               <li>
                 <strong>Cloudflare</strong> — DNS and email routing. Cloudflare

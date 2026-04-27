@@ -43,7 +43,7 @@ export default function TermsPage() {
           <h1 className="text-3xl sm:text-4xl font-bold text-[#1E3A5F] mb-2">
             Terms of Service
           </h1>
-          <p className="text-sm text-slate-500 mb-10">Last updated: April 2026</p>
+          <p className="text-sm text-slate-500 mb-10">Last updated: 27 April 2026</p>
 
           <div className="mb-10 text-slate-600 leading-relaxed space-y-3">
             <p>
@@ -141,10 +141,12 @@ export default function TermsPage() {
               on) remain in your account until you delete them.
             </p>
             <p>
-              The &quot;Record Voice&quot; feature uses your browser&apos;s
-              built-in Web Speech API. Audio is transcribed locally in your
-              browser and never reaches our servers. Only the resulting text
-              is sent to NDLedger.
+              The &quot;Record Voice&quot; feature captures audio in your
+              browser and sends it to OpenAI&apos;s Whisper API for
+              transcription. The resulting text is then sent to NDLedger for
+              extraction. Audio is sent to OpenAI solely for transcription
+              and is not retained by OpenAI beyond the duration of the API
+              call. NDLedger does not store your audio.
             </p>
             <p>
               You are solely responsible for the content you upload and for
