@@ -52,36 +52,27 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
   const overLimit = wordCount > MAX_WORDS;
   const showWarning = wordCount >= WARN_WORDS && wordCount <= MAX_WORDS;
 
-  // --- Voice recording (Web Speech API) ---
+  // --- Voice recording (MediaRecorder + Whisper) ---
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [speechSupported, setSpeechSupported] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
 
-  // Refs that survive re-renders without triggering them. recognitionRef
-  // holds the live SpeechRecognition instance; baseContentRef snapshots
-  // whatever was already in the textarea when recording started so live
-  // transcription appends instead of overwriting; finalTranscriptRef
-  // accumulates finalised chunks across multiple onresult events.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const baseContentRef = useRef("");
-  const finalTranscriptRef = useRef("");
+  const streamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
-      setSpeechSupported(true);
-    }
-  }, []);
-
-  // Cleanup on unmount: ensure no orphan recognition session or timer
-  // survives if the user navigates away mid-recording.
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        try { mediaRecorderRef.current.stop(); } catch {}
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
   }, []);
@@ -93,92 +84,121 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
     return base + (needsSpace ? " " : "") + addition;
   };
 
-  const startRecording = () => {
-    if (!speechSupported || isRecording) return;
+  const startRecording = async () => {
+    if (isRecording || isTranscribing) return;
     setRecordingError(null);
-
+    audioChunksRef.current = [];
     baseContentRef.current = content;
-    finalTranscriptRef.current = "";
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognition = (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-GB";
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setRecordingError("Microphone permission denied. Enable mic access in your browser.");
+      return;
+    }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onresult = (event: any) => {
-      // Walk only the results that changed since the last event.
-      // Final results are appended to finalTranscriptRef once and never
-      // re-fire (resultIndex advances past them). Interim results are
-      // recomputed each event — they can refine across multiple fires
-      // before becoming final.
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        const transcript = result[0].transcript;
-        if (result.isFinal) {
-          finalTranscriptRef.current += transcript;
-        } else {
-          interim += transcript;
-        }
-      }
-      setContent(
-        composeContent(baseContentRef.current, finalTranscriptRef.current + interim),
-      );
+    streamRef.current = stream;
+
+    // Prefer webm/opus; fall back to whatever the browser supports
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : MediaRecorder.isTypeSupported("audio/webm")
+      ? "audio/webm"
+      : "";
+
+    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onerror = (event: any) => {
-      setRecordingError(
-        event.error === "not-allowed"
-          ? "Microphone permission denied. Enable mic access in your browser."
-          : `Recording error: ${event.error}`,
-      );
-    };
+    recorder.onstop = async () => {
+      // Stop mic tracks immediately
+      stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
 
-    recognition.onend = () => {
-      // Fires after stop(), abort(), error, or auto-stop on silence.
-      // Idempotent cleanup — safe to call regardless of how we got here.
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
       }
-      // Drop any trailing interim by recomposing from base + finalised.
-      setContent(composeContent(baseContentRef.current, finalTranscriptRef.current));
+
       setIsRecording(false);
-      recognitionRef.current = null;
+
+      // If cancelled, audioChunksRef will be empty — do nothing
+      if (audioChunksRef.current.length === 0) return;
+
+      setIsTranscribing(true);
+
+      const audioBlob = new Blob(audioChunksRef.current, {
+        type: mimeType || "audio/webm",
+      });
+
+      try {
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.webm");
+
+        const res = await fetch("/api/transcribe", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Unknown error" }));
+          setRecordingError(`Transcription failed: ${err.error ?? res.statusText}`);
+          return;
+        }
+
+        const { text } = await res.json();
+        if (text) {
+          setContent(composeContent(baseContentRef.current, text));
+        }
+      } catch {
+        setRecordingError("Transcription failed. Please try again.");
+      } finally {
+        setIsTranscribing(false);
+        audioChunksRef.current = [];
+      }
     };
 
-    recognitionRef.current = recognition;
+    mediaRecorderRef.current = recorder;
 
     try {
-      recognition.start();
+      recorder.start(250); // collect chunks every 250ms
       setIsRecording(true);
       setRecordingSeconds(0);
       timerIntervalRef.current = setInterval(() => {
         setRecordingSeconds((s) => s + 1);
       }, 1000);
     } catch {
-      setRecordingError("Could not start recording");
-      recognitionRef.current = null;
+      setRecordingError("Could not start recording.");
+      stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
   };
 
   const stopRecording = () => {
-    if (!recognitionRef.current) return;
-    try { recognitionRef.current.stop(); } catch {}
-    // onend will finalise content and reset isRecording.
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") return;
+    try { mediaRecorderRef.current.stop(); } catch {}
+    // onstop handles the rest
   };
 
   const cancelRecording = () => {
-    // Wipe the accumulator first so onend's recompute restores baseContent.
-    finalTranscriptRef.current = "";
+    // Clear chunks so onstop skips transcription
+    audioChunksRef.current = [];
     setContent(baseContentRef.current);
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try { mediaRecorderRef.current.stop(); } catch {}
     }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    setIsRecording(false);
   };
 
   const formatRecordingTime = (s: number) => {
@@ -442,7 +462,7 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
                       placeholder="Paste your conversation here..."
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
-                      disabled={uploading || isRecording}
+                      disabled={uploading || isRecording || isTranscribing}
                       className="min-h-[200px]"
                     />
                     {wordCount > 0 && !showWarning && !overLimit && (
@@ -463,27 +483,23 @@ export function DashboardContent({ user, transcripts, insights }: DashboardConte
                   </div>
 
                   <div>
-                    {!isRecording ? (
+                    {isTranscribing ? (
+                      <div className="flex items-center gap-3 p-3 rounded-md border border-blue-200 bg-blue-50">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="text-sm font-medium text-blue-700">Transcribing...</span>
+                      </div>
+                    ) : !isRecording ? (
                       <>
                         <Button
                           type="button"
                           variant="outline"
                           onClick={startRecording}
-                          disabled={uploading || !speechSupported}
-                          title={
-                            speechSupported
-                              ? "Record voice and live-transcribe into the textarea"
-                              : "Voice recording not supported in this browser (requires Chrome / Edge)"
-                          }
+                          disabled={uploading}
+                          title="Record voice and transcribe into the textarea"
                         >
                           <Mic className="h-4 w-4 mr-2" />
                           Record Voice
                         </Button>
-                        {!speechSupported && (
-                          <p className="text-xs mt-1 text-muted-foreground">
-                            Voice recording requires a Chromium-based browser (Chrome, Edge).
-                          </p>
-                        )}
                         {recordingError && (
                           <p className="text-xs mt-1 text-red-600">{recordingError}</p>
                         )}
