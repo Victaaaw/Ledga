@@ -102,3 +102,33 @@ The file already conforms. Any new copy must follow the same convention.
 The Settings → Danger Zone → Delete My Account path deletes all data and the account. The right-arrow symbol (→) in that path is intentional and should not be changed.
 
 **Why:** The dashboard exposes transcript records, not topic records, as the deletable unit. Saying "topics" was factually incorrect.
+
+---
+
+## 7. Pricing copy: hint, do not claim, paid tiers
+
+**Rule:** Marketing copy must not assert that paid tiers exist until they are actually implemented in code. Use phrasing that leaves room for a future paid plan without inventing one today.
+
+**Pricing structure found in code (2026-04-29 audit):**
+- No Stripe or other payment integration in `package.json`
+- No `/pricing` route under `src/app/`
+- No subscription, plan, or tier tables (no `supabase/` directory or migration files)
+- No tier or plan constants anywhere in the codebase
+- Only quantitative limit found: `WARN_WORDS = 50000` and `MAX_WORDS = 100000` at `src/app/dashboard/dashboard-content.tsx:49-50`, applied uniformly to all users
+- `skills/pricing-strategy/references/tier-structure.md` is generic educational material, not a product spec
+
+**Decision:** Soften the hero and final CTA subtext from
+> Free to use. No credit card. Works with any AI tool.
+
+to
+> Free plan available. No credit card to start. Works with any AI tool.
+
+**Rationale:**
+- "Free plan available" implies a free tier alongside a possible paid tier without claiming paid tiers exist today
+- "No credit card to start" preserves the friction-free signup message while leaving room for billing to be introduced later
+- "Works with any AI tool" remains true regardless of pricing structure
+- Both occurrences (hero at the top and final CTA at the bottom) updated for consistency
+
+**Applied in:** `src/app/(marketing)/page.tsx` (hero subtext and final CTA subtext).
+
+**Do not:** Add specific tier names, prices, "starting at" figures, or trial language until those tiers are actually built.

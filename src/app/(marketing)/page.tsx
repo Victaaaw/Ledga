@@ -74,7 +74,7 @@ export default async function MarketingHome() {
             Create My Free Library
           </Link>
           <p className="mt-4 text-sm text-slate-500">
-            Free to use. No credit card. Works with any AI tool.
+            Free plan available. No credit card to start. Works with any AI tool.
           </p>
         </div>
       </section>
@@ -216,7 +216,7 @@ export default async function MarketingHome() {
             Start building the library your AI sessions deserve.
           </h2>
           <p className="text-lg text-white/70 mb-10">
-            Free to use. No credit card. Works with any AI tool.
+            Free plan available. No credit card to start. Works with any AI tool.
           </p>
           <Link
             href="/login"
