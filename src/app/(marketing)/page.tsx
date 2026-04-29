@@ -11,11 +11,10 @@ import {
   GitBranch,
   Search,
   ChevronDown,
+  Shield,
+  CheckCircle,
 } from "lucide-react";
 
-// Marketing landing page at /. Server component so we can auth-check
-// up-front and bounce already-signed-in users straight to the dashboard
-// instead of forcing them through marketing copy on every refresh.
 export default async function MarketingHome() {
   const supabase = createClient();
   const {
@@ -60,109 +59,176 @@ export default async function MarketingHome() {
             style={{ height: "auto", maxHeight: "6rem" }}
             priority
           />
+          <h1 className="text-3xl sm:text-4xl font-bold text-[#1E3A5F] mb-5 leading-tight">
+            Your AI conversations are full of good ideas.
+            <br className="hidden sm:block" /> Stop losing them.
+          </h1>
           <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
-            Transform scattered AI conversations into an organised, searchable
-            knowledge library.
+            NDLedger extracts every decision, task, and insight from your AI
+            chats and builds you a searchable library. No note-taking required.
           </p>
           <Link
             href="/login"
             className="inline-block bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold px-8 py-4 rounded-lg text-base transition-colors"
           >
-            Get Started
+            Create My Free Library
           </Link>
+          <p className="mt-4 text-sm text-slate-500">
+            Free to use. No credit card. Works with any AI tool.
+          </p>
+        </div>
+      </section>
+
+      {/* Pain */}
+      <section className="px-4 py-14 sm:py-16 bg-[#1E3A5F]">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-10">
+            Sound familiar?
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <PainCard text="You made a big product decision last month — and now you can't find it." />
+            <PainCard text="You solved this exact problem before, in a chat you'll never locate again." />
+            <PainCard text="Your AI history is sorted by date. Your brain isn't." />
+          </div>
         </div>
       </section>
 
       {/* How it works */}
       <section className="px-4 py-16 sm:py-20 bg-[#F8FAFC]">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-[#1E3A5F]">
-            How it works
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-3 text-[#1E3A5F]">
+            Three steps. No extra effort.
           </h2>
+          <p className="text-center text-slate-500 mb-12">
+            Upload once, your library builds itself from there.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Step
               icon={<Upload className="h-8 w-8" />}
-              title="1. Upload"
-              desc="Paste an AI conversation transcript or record audio directly in the browser."
+              title="1. Paste or record"
+              desc="Drop in a transcript from any AI tool — ChatGPT, Claude, Gemini, Perplexity, anything. Or record audio right in the browser; Whisper handles transcription automatically."
             />
             <Step
               icon={<Sparkles className="h-8 w-8" />}
-              title="2. Extract"
-              desc="Claude reads the conversation and pulls out topics, decisions, commitments, tasks, insights, and pivots."
+              title="2. We extract everything"
+              desc="Claude reads the conversation and pulls out every decision, commitment, task, insight, and pivot. The original transcript is deleted immediately after."
             />
             <Step
               icon={<Layers className="h-8 w-8" />}
-              title="3. Organise"
-              desc="Browse your categorised library, search across everything, and explore connections in the mind map."
+              title="3. Your library builds itself"
+              desc="Browse by topic or category, search across everything, or see how your ideas connect in the mind map. The work accumulates — you don't have to."
             />
           </div>
         </div>
       </section>
 
-      {/* Features */}
+      {/* Benefits */}
       <section className="px-4 py-16 sm:py-20">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-[#1E3A5F]">
-            Features
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-3 text-[#1E3A5F]">
+            Everything scattered, now organised
           </h2>
+          <p className="text-center text-slate-500 mb-12">
+            Built for people who do their best thinking in conversation.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <Feature
               icon={<Hash className="h-6 w-6" />}
-              title="Topics"
-              desc="Auto-categorised topics across business, technical, personal, and other contexts."
+              title="Auto-organised topics"
+              desc="Every conversation is sorted into six business-relevant categories — no tagging, no manual sorting, no system to maintain."
             />
             <Feature
               icon={<Lightbulb className="h-6 w-6" />}
-              title="Insights"
-              desc="Decisions, commitments, tasks, insights, and pivots, extracted automatically and tagged by personal or business context."
+              title="Six types of insight"
+              desc="Decisions, commitments, tasks, insights, and pivots — each labelled and searchable, not buried inside paragraphs of transcript."
             />
             <Feature
               icon={<GitBranch className="h-6 w-6" />}
-              title="Mind Map"
-              desc="Visual graph showing how your topics, categories, and insights connect across every conversation."
+              title="Mind map view"
+              desc="See how topics and ideas connect across weeks of conversations. Patterns you'd never spot by scrolling through chat history."
             />
             <Feature
               icon={<Search className="h-6 w-6" />}
-              title="Search"
-              desc="Full-text search across every insight, filterable by type."
+              title="Full-text search"
+              desc="One search box. Every insight you've ever extracted. Filter by type to find decisions, tasks, or ideas in seconds."
             />
+          </div>
+        </div>
+      </section>
+
+      {/* Privacy */}
+      <section className="px-4 py-16 sm:py-20 bg-[#F8FAFC]">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-[#0D9488] text-white mb-6">
+            <Shield className="h-7 w-7" />
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#1E3A5F]">
+            Built for people who think out loud — privately.
+          </h2>
+          <p className="text-lg text-slate-600 mb-10">
+            Paste your most sensitive strategy sessions without hesitation. Your
+            transcript is deleted the moment extraction finishes. The only thing
+            we keep is the structured insight — not the raw conversation.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-6 text-left">
+            <TrustPoint text="Transcript deleted immediately after extraction" />
+            <TrustPoint text="Row-level security — only your account reads your data" />
+            <TrustPoint text="We never share, sell, or train on your data" />
           </div>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="px-4 py-16 sm:py-20 bg-[#F8FAFC]">
+      <section className="px-4 py-16 sm:py-20">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-[#1E3A5F]">
-           FAQs
+            Questions
           </h2>
           <div className="space-y-3">
             <Faq
-              q="What is NDLedger?"
-              a="NDLedger turns your AI chat history into a searchable knowledge library. Upload transcripts from any AI assistant and we extract the topics, decisions, commitments, tasks, insights, and pivots automatically, so the work you do with AI accumulates into something you can come back to."
-            />
-            <Faq
-              q="How does extraction work?"
-              a="When you upload a transcript, Claude reads through it and identifies discrete topics and the insights tied to each one. Each insight is tagged by type (decision, commitment, insight, pivot, or task) and by personal/business context, then stored in your library. The original transcript is deleted after extraction; only the extracted insights are kept."
-            />
-            <Faq
-              q="What are the categories?"
-              a="Topics fall into six categories: Business & Monetisation, Go to Market, Legal & Compliance, Personal & Ideas, Product & Features, and Technical. Categories are assigned automatically during extraction and you can filter and explore by category in the mind map."
+              q="Which AI tools does this work with?"
+              a="Any of them. ChatGPT, Claude, Gemini, Grok, Perplexity — if you can copy-paste the conversation, NDLedger can extract it. You can also record audio directly in the browser and we'll transcribe it for you."
             />
             <Faq
               q="Is my data private?"
-              a="Yes. Your data lives in a row-level-secured Postgres database. Only your authenticated session can read or write your rows. We don't share, sell, or train models on your data."
+              a="Yes. Transcripts are deleted immediately after extraction. Only the structured insights are stored, in a row-level-secured database that only your authenticated account can access. We don't share, sell, or train models on your data."
+            />
+            <Faq
+              q="What if the extraction misses something important?"
+              a="You can re-upload a transcript at any time. Extraction runs again and adds any new insights it finds, without duplicating ones already in your library."
+            />
+            <Faq
+              q="How does extraction work?"
+              a="When you upload a transcript, Claude reads through it and identifies discrete topics and the insights within each. Each insight is labelled by type — decision, commitment, task, insight, or pivot — and assigned to one of six categories, then stored in your library. The transcript is deleted immediately after."
             />
             <Faq
               q="How do I delete my data?"
-              a="You can delete individual transcripts and their associated insights from your dashboard at any time. To remove everything, go to Settings → Danger Zone → Delete My Account. This permanently removes every transcript, topic, and insight tied to your account, plus the account itself. The action cannot be undone."
+              a="Delete individual topics from your dashboard at any time. To remove everything, go to Settings → Danger Zone → Delete My Account. This permanently removes every topic, insight, and the account itself. It cannot be undone."
             />
           </div>
         </div>
       </section>
 
+      {/* Final CTA */}
+      <section className="px-4 py-16 sm:py-24 bg-[#1E3A5F]">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+            Start building the library your AI sessions deserve.
+          </h2>
+          <p className="text-lg text-white/70 mb-10">
+            Free to use. No credit card. Works with any AI tool.
+          </p>
+          <Link
+            href="/login"
+            className="inline-block bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold px-8 py-4 rounded-lg text-base transition-colors"
+          >
+            Create My Free Library
+          </Link>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="px-4 py-10 bg-[#1E3A5F] text-white">
+      <footer className="px-4 py-10 bg-[#1E3A5F] border-t border-white/10 text-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <Image
             src="/logo.png"
@@ -185,6 +251,23 @@ export default async function MarketingHome() {
           <p className="text-xs text-white/60">© 2026 NDLedger</p>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function PainCard({ text }: { text: string }) {
+  return (
+    <div className="bg-white/10 rounded-lg p-5">
+      <p className="text-white/90 text-base leading-relaxed">{text}</p>
+    </div>
+  );
+}
+
+function TrustPoint({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <CheckCircle className="h-5 w-5 text-[#0D9488] shrink-0 mt-0.5" />
+      <span className="text-sm text-slate-700">{text}</span>
     </div>
   );
 }
