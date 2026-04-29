@@ -5,6 +5,18 @@ Read this before editing that page. Do not revert or contradict these choices wi
 
 ---
 
+## 0. Never edit route files with heredoc shell commands
+
+**Rule:** Do not use `cat > path/to/file << 'EOF' ... EOF` to write or overwrite TypeScript source files. The heredoc delimiters will be written literally into the file as invalid syntax.
+
+**Incident (2026-04-29):** `src/app/Transcribe/route.ts` was created with a bash heredoc command. Line 1 contained `cat > src/app/api/transcribe/route.ts << 'EOF'` and the closing `EOF` appeared at the end of the file. This broke the Vercel build with a TypeScript parse error.
+
+**Fix:** Remove the heredoc delimiters (line 1 and the trailing `EOF`) so the file starts directly with the TypeScript `import` statement.
+
+**How to avoid:** Use the Write tool (or Edit tool) to create or modify source files. Never pipe file content through shell commands.
+
+---
+
 ## 1. Australian English throughout
 
 **Rule:** Use AU/British English spelling and grammar everywhere on the site.

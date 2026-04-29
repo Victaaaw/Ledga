@@ -1,4 +1,3 @@
-cat > src/app/api/transcribe/route.ts << 'EOF'
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -50,4 +49,3 @@ export async function POST(request: NextRequest) {
   const result = await response.json();
   return NextResponse.json({ text: result.text });
 }
-EOF
