@@ -59,9 +59,9 @@ export default async function MarketingHome() {
             style={{ height: "auto", maxHeight: "6rem" }}
             priority
           />
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#1E3A5F] mb-5 leading-tight">
-            Your AI conversations are full of good ideas.
-            <br /> Stop losing them.
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#1E3A5F] mb-5 leading-tight">
+            <span className="block">Your AI conversations are full of good ideas.</span>
+            <span className="block">Stop losing them.</span>
           </h1>
           <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
             NDLedger extracts every decision, task, and insight from your AI
