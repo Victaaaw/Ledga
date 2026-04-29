@@ -109,6 +109,16 @@ The file already conforms. Any new copy must follow the same convention.
 
 ---
 
+## 8. CTA button copy: "Get Started" not "Create My Free Library"
+
+**Rule:** The primary CTA button (hero and final CTA section) reads "Get Started". Do not revert to "Create My Free Library".
+
+**Why:** "Create My Free Library" implies the library is permanently free, which conflicts with the planned paid tiers (see entry 7). "Get Started" is neutral, accurate at any pricing tier, and more concise.
+
+**Applied to:** Both CTA buttons in `src/app/(marketing)/page.tsx` (hero section and final CTA section). Both link to `/login` — links unchanged.
+
+---
+
 ## 6. Deletion subject: transcripts, not topics
 
 **Rule:** Users delete transcripts from the dashboard, not topics. The "How do I delete my data?" FAQ must reflect this.

@@ -71,7 +71,7 @@ export default async function MarketingHome() {
             href="/login"
             className="inline-block bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold px-8 py-4 rounded-lg text-base transition-colors"
           >
-            Create My Free Library
+            Get Started
           </Link>
           <p className="mt-4 text-sm text-slate-500">
             Free to get started. No credit card required. Works with any AI tool.
@@ -222,7 +222,7 @@ export default async function MarketingHome() {
             href="/login"
             className="inline-block bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold px-8 py-4 rounded-lg text-base transition-colors"
           >
-            Create My Free Library
+            Get Started
           </Link>
         </div>
       </section>
