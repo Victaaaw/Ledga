@@ -92,6 +92,21 @@ The file already conforms. Any new copy must follow the same convention.
 
 ---
 
+## 7. Pricing copy: "Free to use. No credit card. Works with any AI tool." is accurate — do not add paid-tier caveats
+
+**Rule:** Do not change the hero CTA subtext to imply paid plans exist. The current wording is accurate.
+
+**Investigation (2026-04-29):** A full codebase audit confirmed NDLedger has no paid tiers, no Stripe or billing integration, and no subscription model of any kind. Files checked: all `src/`, `lib/`, `config/`, Supabase schema, `.env.local`, `package.json`. No `pricing.ts`, `plans.ts`, `stripe.ts`, or equivalent files exist. No `STRIPE_*` environment variables. No `/pricing` page.
+
+**Existing limits are technical guardrails, not commercial tiers:**
+- 100,000 word soft limit (frontend) and 200,000 character hard limit (backend) exist to control Anthropic API costs — they apply equally to all users and are not tied to a plan.
+
+**Copy verdict:** "Free to use. No credit card. Works with any AI tool." is factually correct. Do not soften or caveat it with "Free plan available" or "Paid plans coming soon" until a paid tier is actually built and deployed.
+
+**When pricing is added:** Update this entry, add a `/pricing` page, and update the hero subtext and button copy to reflect the actual tier structure at that time.
+
+---
+
 ## 6. Deletion subject: transcripts, not topics
 
 **Rule:** Users delete transcripts from the dashboard, not topics. The "How do I delete my data?" FAQ must reflect this.
