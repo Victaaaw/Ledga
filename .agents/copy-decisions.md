@@ -92,18 +92,20 @@ The file already conforms. Any new copy must follow the same convention.
 
 ---
 
-## 7. Pricing copy: "Free to use. No credit card. Works with any AI tool." is accurate — do not add paid-tier caveats
+## 7. Pricing copy: use "Free to get started" not "Free to use"
 
-**Rule:** Do not change the hero CTA subtext to imply paid plans exist. The current wording is accurate.
+**Rule:** Do not use the phrase "Free to use" anywhere on the site. Use "Free to get started" or "Start for free" instead.
 
-**Investigation (2026-04-29):** A full codebase audit confirmed NDLedger has no paid tiers, no Stripe or billing integration, and no subscription model of any kind. Files checked: all `src/`, `lib/`, `config/`, Supabase schema, `.env.local`, `package.json`. No `pricing.ts`, `plans.ts`, `stripe.ts`, or equivalent files exist. No `STRIPE_*` environment variables. No `/pricing` page.
+**Why:** "Free to use" implies the product will always be free. The product owner has confirmed paid tiers are planned (even though they are not yet built in the codebase). "Free to get started" accurately reflects that the free tier exists today while leaving room for paid plans.
 
-**Existing limits are technical guardrails, not commercial tiers:**
-- 100,000 word soft limit (frontend) and 200,000 character hard limit (backend) exist to control Anthropic API costs — they apply equally to all users and are not tied to a plan.
+**Current copy (both hero and final CTA section):**
+> "Free to get started. No credit card required. Works with any AI tool."
 
-**Copy verdict:** "Free to use. No credit card. Works with any AI tool." is factually correct. Do not soften or caveat it with "Free plan available" or "Paid plans coming soon" until a paid tier is actually built and deployed.
+**Do not revert to:** "Free to use. No credit card. Works with any AI tool."
 
-**When pricing is added:** Update this entry, add a `/pricing` page, and update the hero subtext and button copy to reflect the actual tier structure at that time.
+**Background:** A codebase audit on 2026-04-29 found no Stripe integration or pricing tiers in the code. However, the product owner subsequently confirmed paid tiers are a planned business decision. Copy must reflect business intent, not just current code state. The technical guardrails (100k word / 200k char limits) are cost controls applied equally to all users and are not tier boundaries — but commercial tiers will exist in future.
+
+**When pricing is added:** Update this entry, add a `/pricing` page, and revise button copy and subtext to reflect the actual tier names and prices.
 
 ---
 
