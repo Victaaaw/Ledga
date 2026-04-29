@@ -61,7 +61,7 @@ export default async function MarketingHome() {
           />
           <h1 className="text-3xl sm:text-4xl font-bold text-[#1E3A5F] mb-5 leading-tight">
             Your AI conversations are full of good ideas.
-            <br className="hidden sm:block" /> Stop losing them.
+            <br /> Stop losing them.
           </h1>
           <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
             NDLedger extracts every decision, task, and insight from your AI
@@ -86,7 +86,7 @@ export default async function MarketingHome() {
             Sound familiar?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <PainCard text="You made a big product decision last month — and now you can't find it." />
+            <PainCard text="You made a big product decision last month, and now you can't find it." />
             <PainCard text="You solved this exact problem before, in a chat you'll never locate again." />
             <PainCard text="Your AI history is sorted by date. Your brain isn't." />
           </div>
@@ -100,13 +100,13 @@ export default async function MarketingHome() {
             Three steps. No extra effort.
           </h2>
           <p className="text-center text-slate-500 mb-12">
-            Upload once, your library builds itself from there.
+            Add a conversation; your library builds itself from there.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Step
               icon={<Upload className="h-8 w-8" />}
               title="1. Paste or record"
-              desc="Drop in a transcript from any AI tool — ChatGPT, Claude, Gemini, Perplexity, anything. Or record audio right in the browser; Whisper handles transcription automatically."
+              desc="Drop in a transcript from any AI tool: ChatGPT, Claude, Gemini, Perplexity, anything. Or record audio right in the browser; Whisper handles transcription automatically."
             />
             <Step
               icon={<Sparkles className="h-8 w-8" />}
@@ -116,7 +116,7 @@ export default async function MarketingHome() {
             <Step
               icon={<Layers className="h-8 w-8" />}
               title="3. Your library builds itself"
-              desc="Browse by topic or category, search across everything, or see how your ideas connect in the mind map. The work accumulates — you don't have to."
+              desc="Browse by topic or category, search across everything, or see how your ideas connect in the mind map. The work accumulates; you don't have to."
             />
           </div>
         </div>
@@ -135,12 +135,12 @@ export default async function MarketingHome() {
             <Feature
               icon={<Hash className="h-6 w-6" />}
               title="Auto-organised topics"
-              desc="Every conversation is sorted into six business-relevant categories — no tagging, no manual sorting, no system to maintain."
+              desc="Every conversation is sorted into six business-relevant categories (and one personal). No tagging, no manual sorting, no system to maintain."
             />
             <Feature
               icon={<Lightbulb className="h-6 w-6" />}
               title="Six types of insight"
-              desc="Decisions, commitments, tasks, insights, and pivots — each labelled and searchable, not buried inside paragraphs of transcript."
+              desc="Decisions, commitments, tasks, insights, and pivots: each labelled and searchable, not buried inside paragraphs of transcript."
             />
             <Feature
               icon={<GitBranch className="h-6 w-6" />}
@@ -163,16 +163,16 @@ export default async function MarketingHome() {
             <Shield className="h-7 w-7" />
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#1E3A5F]">
-            Built for people who think out loud — privately.
+            Built for people who think out loud, privately.
           </h2>
           <p className="text-lg text-slate-600 mb-10">
             Paste your most sensitive strategy sessions without hesitation. Your
             transcript is deleted the moment extraction finishes. The only thing
-            we keep is the structured insight — not the raw conversation.
+            we keep is the structured insight, not the raw conversation.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-6 text-left">
             <TrustPoint text="Transcript deleted immediately after extraction" />
-            <TrustPoint text="Row-level security — only your account reads your data" />
+            <TrustPoint text="Row-level security: only your account reads your data" />
             <TrustPoint text="We never share, sell, or train on your data" />
           </div>
         </div>
@@ -187,7 +187,7 @@ export default async function MarketingHome() {
           <div className="space-y-3">
             <Faq
               q="Which AI tools does this work with?"
-              a="Any of them. ChatGPT, Claude, Gemini, Grok, Perplexity — if you can copy-paste the conversation, NDLedger can extract it. You can also record audio directly in the browser and we'll transcribe it for you."
+              a="Any of them. ChatGPT, Claude, Gemini, Grok, Perplexity. If you can copy-paste the conversation, NDLedger can extract it. You can also record audio directly in the browser and we'll transcribe it for you."
             />
             <Faq
               q="Is my data private?"
@@ -195,15 +195,15 @@ export default async function MarketingHome() {
             />
             <Faq
               q="What if the extraction misses something important?"
-              a="You can re-upload a transcript at any time. Extraction runs again and adds any new insights it finds, without duplicating ones already in your library."
+              a="You can paste the transcript again at any time. Extraction runs again and adds any new insights it finds, without duplicating ones already in your library."
             />
             <Faq
               q="How does extraction work?"
-              a="When you upload a transcript, Claude reads through it and identifies discrete topics and the insights within each. Each insight is labelled by type — decision, commitment, task, insight, or pivot — and assigned to one of six categories, then stored in your library. The transcript is deleted immediately after."
+              a="When you paste or record a conversation, Claude reads through it and identifies discrete topics and the insights within each. Each insight is labelled by type (decision, commitment, task, insight, or pivot) and assigned to one of seven categories, then stored in your library. The original text is deleted immediately after."
             />
             <Faq
               q="How do I delete my data?"
-              a="Delete individual topics from your dashboard at any time. To remove everything, go to Settings → Danger Zone → Delete My Account. This permanently removes every topic, insight, and the account itself. It cannot be undone."
+              a="Delete individual transcripts from your dashboard at any time. To remove everything, go to Settings → Danger Zone → Delete My Account. This permanently removes all your data and the account itself. It cannot be undone."
             />
           </div>
         </div>
