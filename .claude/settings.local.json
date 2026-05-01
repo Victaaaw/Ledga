@@ -6,7 +6,9 @@
       "Bash(ls -la /c/Users/User/OneDrive/Desktop/AI/Ledga/ledga-app/*.json /c/Users/User/OneDrive/Desktop/AI/Ledga/ledga-app/*.yml /c/Users/User/OneDrive/Desktop/AI/Ledga/ledga-app/*.yaml)",
       "Bash(ls:*)",
       "Bash(python -c \"import struct; f=open\\('public/logo.png','rb'\\); f.read\\(16\\); w,h=struct.unpack\\('>II',f.read\\(8\\)\\); print\\(f'dimensions: {w}x{h}'\\)\")",
-      "Bash(node -e \"const fs=require\\('fs'\\);const b=fs.readFileSync\\('public/logo.png'\\);console.log\\('dimensions:',b.readUInt32BE\\(16\\)+'x'+b.readUInt32BE\\(20\\)\\);\")"
+      "Bash(node -e \"const fs=require\\('fs'\\);const b=fs.readFileSync\\('public/logo.png'\\);console.log\\('dimensions:',b.readUInt32BE\\(16\\)+'x'+b.readUInt32BE\\(20\\)\\);\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

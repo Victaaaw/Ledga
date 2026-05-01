@@ -38,3 +38,5 @@
 - Tailwind + shadcn/ui
 - React Flow (mind map)
 - Claude Code CLI (extraction)
+
+Before any marketing, content, copy, or community task — read ndledger-brand.md first.
