@@ -331,6 +331,9 @@ export default function PricingPage() {
             </a>
           </nav>
           <p className="text-xs text-white/60">&copy; 2026 NDLedger</p>
+          <a href="https://dofollow.tools" target="_blank" rel="noopener noreferrer">
+            <img src="https://dofollow.tools/badge/badge_transparent.svg" alt="Featured on Dofollow.Tools" width="200" height="54" />
+          </a>
         </div>
       </footer>
     </div>
