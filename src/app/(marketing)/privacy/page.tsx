@@ -8,8 +8,8 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <header className="border-b border-slate-200">
+    <div className="min-h-screen bg-white text-slate-900" id="top">
+      <header className="bg-[#1E3A5F]">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" aria-label="NDLedger home">
             <Image
@@ -24,13 +24,13 @@ export default function PrivacyPage() {
           <div className="flex items-center gap-6">
            <Link
   href="/"
-  className="hidden sm:inline-block text-sm font-medium text-[#1E3A5F] hover:text-[#0D9488]"
+  className="hidden sm:inline-block text-sm font-medium text-white/80 hover:text-[#5EEAD4]"
 >
   ← Back to home
 </Link>
             <Link
   href="/login"
-  className="text-sm font-medium text-[#1E3A5F] hover:text-[#0D9488]"
+  className="text-sm font-medium text-white/80 hover:text-[#5EEAD4]"
 >
   Sign in
 </Link>
@@ -38,9 +38,18 @@ export default function PrivacyPage() {
         </div>
       </header>
 
+      {/* Scroll down arrow */}
+      <div className="flex justify-center py-2">
+        <a href="#bottom" className="text-[#0D9488] hover:text-[#0F766E] transition-colors" aria-label="Scroll to bottom">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </a>
+      </div>
+
       <main className="px-4 py-16 sm:py-20">
         <article className="max-w-3xl mx-auto">
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#1E3A5F] mb-2">
+          <h1 className="text-3xl sm:text-4xl font-bold text-[#0D9488] mb-2">
             Privacy Policy
           </h1>
           <p className="text-sm text-slate-500 mb-10">Last updated: 27 April 2026</p>
@@ -267,6 +276,15 @@ export default function PrivacyPage() {
         </article>
       </main>
 
+      {/* Scroll up arrow */}
+      <div className="flex justify-center py-2" id="bottom">
+        <a href="#top" className="text-[#0D9488] hover:text-[#0F766E] transition-colors" aria-label="Scroll to top">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+          </svg>
+        </a>
+      </div>
+
       <footer className="px-4 py-10 bg-[#1E3A5F] text-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <Image
@@ -277,6 +295,9 @@ export default function PrivacyPage() {
             className="h-10 w-auto"
           />
           <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
+            <Link href="/pricing" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
+              Pricing
+            </Link>
             <Link href="/privacy" className="text-[#5EEAD4] font-medium">
   Privacy Policy
 </Link>
