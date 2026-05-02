@@ -323,12 +323,12 @@ export default function PricingPage() {
             >
               Terms of Service
             </Link>
-            <a
-              href="mailto:privacy@ndledger.com"
+            <Link
+              href="/contact"
               className="text-white/80 hover:text-[#5EEAD4] transition-colors"
             >
               Contact
-            </a>
+            </Link>
           </nav>
           <p className="text-xs text-white/60">&copy; 2026 NDLedger</p>
           <a href="https://dofollow.tools" target="_blank" rel="noopener noreferrer">
