@@ -255,29 +255,36 @@ export default async function MarketingHome() {
 
       {/* Footer */}
       <footer className="px-4 py-10 bg-[#1E3A5F] border-t border-white/10 text-white">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Image
-            src="/logo.png"
-            alt="NDLedger logo"
-            width={1536}
-            height={1024}
-            className="h-10 w-auto"
-          />
-          <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
-            <Link href="/pricing" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
-              Pricing
-            </Link>
-            <Link href="/privacy" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/contact" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
-              Contact
-            </Link>
-          </nav>
-          <p className="text-xs text-white/60">© 2026 NDLedger</p>
+        <div className="max-w-5xl mx-auto flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <Image
+              src="/logo.png"
+              alt="NDLedger logo"
+              width={1536}
+              height={1024}
+              className="h-10 w-auto"
+            />
+            <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
+              <Link href="/pricing" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
+                Pricing
+              </Link>
+              <Link href="/privacy" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
+                Terms of Service
+              </Link>
+              <Link href="/contact" className="text-white/80 hover:text-[#5EEAD4] transition-colors">
+                Contact
+              </Link>
+            </nav>
+            <p className="text-xs text-white/60">© 2026 NDLedger</p>
+          </div>
+          <div className="flex justify-center">
+            <a href="https://dofollow.tools" target="_blank" rel="noopener noreferrer">
+              <img src="https://dofollow.tools/badge/badge_dark.svg" alt="Featured on Dofollow.Tools" width="200" height="54" />
+            </a>
+          </div>
         </div>
       </footer>
     </div>
