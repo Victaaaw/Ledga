@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -14,18 +14,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return NextResponse.json({ error: "Server misconfigured." }, { status: 500 });
-  }
-
-  const admin = createClient(supabaseUrl, serviceRoleKey);
-
-  const { error } = await admin.from("waitlist").insert({ email });
+  const supabase = createClient();
+  const { error } = await supabase.from("waitlist").insert({ email });
 
   if (error) {
+    console.error("[waitlist] insert error:", error.code, error.message);
     if (error.code === "23505") {
       return NextResponse.json({ error: "duplicate" }, { status: 409 });
     }
