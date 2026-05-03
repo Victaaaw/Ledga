@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle, ChevronDown } from "lucide-react";
+import WaitlistForm from "./WaitlistForm";
 
 export const metadata = {
   title: "Pricing — NDLedger",
@@ -337,22 +338,3 @@ export default function PricingPage() {
   );
 }
 
-function WaitlistForm() {
-  return (
-    <form className="flex gap-3 max-w-md mx-auto">
-      <input
-        type="email"
-        name="email"
-        placeholder="your@email.com"
-        required
-        className="flex-1 px-4 py-3 rounded-lg border-[1.5px] border-slate-200 text-sm text-slate-900 bg-white outline-none focus:border-[#0D9488] transition-colors"
-      />
-      <button
-        type="submit"
-        className="px-5 py-3 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-semibold whitespace-nowrap transition-colors"
-      >
-        Join the Waitlist
-      </button>
-    </form>
-  );
-}
