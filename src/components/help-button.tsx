@@ -90,10 +90,10 @@ export function HelpButton() {
             <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-600">
               Questions? Contact{" "}
               <a
-                href="mailto:hobbesinvestments@gmail.com"
+                href="mailto:privacy@ndledger.com"
                 className="text-[#0D9488] hover:underline"
               >
-                hobbesinvestments@gmail.com
+                privacy@ndledger.com
               </a>
             </div>
           </div>
