@@ -28,9 +28,9 @@
 - Time-box discussions — if stuck, pick one and move on
 
 ## Current State
-- MVP feature-complete
-- Polishing UI
-- Next: Deploy to Vercel
+- Live at https://www.ndledger.com (auto-deploys from GitHub main via Vercel)
+- Post-launch — GTM activation phase (first 50 users)
+- Next: directory listings, demo video, LinkedIn founder story, Product Hunt prep
 
 ## Tech Stack
 - Next.js 14 (App Router)
