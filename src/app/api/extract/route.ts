@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 // CONFIG
 // =============================================================================
 
-const MODEL_ID = "claude-haiku-4-5";
+const MODEL_ID = "claude-haiku-4-5-20251001";
 
 // Guardrail: reject transcripts over this size before spending money on the API.
 // ~50k tokens ≈ 200k characters ≈ a very long document. Real user transcripts
